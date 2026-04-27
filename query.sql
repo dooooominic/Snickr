@@ -6,7 +6,7 @@ VALUES (
     'testuser@gmail.com',
     'ilovedatabases',
     'TestUser1',
-    'password12345'
+    crypt('password12345', gen_salt('bf'))
 );
 
 --2
