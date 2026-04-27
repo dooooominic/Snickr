@@ -72,7 +72,8 @@ CREATE TABLE Channels (
     channel_name TEXT NOT NULL,
     channel_type TEXT NOT NULL CHECK (channel_type IN ('public', 'private', 'direct')),
     creator_id UUID NOT NULL REFERENCES users(user_id),
-    created_at TIMESTAMP NOT NULL DEFAULT now()
+    created_at TIMESTAMP NOT NULL DEFAULT now(),
+    CONSTRAINT uq_channel_name_per_workspace UNIQUE (workspace_id, channel_name)
 );
 
 CREATE TABLE Channel_Membership (
