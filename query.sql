@@ -30,7 +30,7 @@ SELECT c.channel_id, c.creator_id
 FROM channels c
 WHERE c.creator_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
   AND c.workspace_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
-  AND c.channel_name = 'general';
+  AND c.channel_name = 'first channel';
 
 --3
 SELECT
