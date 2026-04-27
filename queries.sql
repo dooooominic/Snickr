@@ -24,7 +24,7 @@ SELECT
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 WHERE EXISTS (SELECT 1 FROM auth_check);
 
--- have teo also add the creator as a member of their new channel!
+-- have to also add the creator as a member of their new channel!
 INSERT INTO channel_membership (channel_id, user_id)
 SELECT c.channel_id, c.creator_id
 FROM channels c

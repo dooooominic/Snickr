@@ -1,28 +1,3 @@
-
-
-/* 
-
-User: 
-  creates workspace 
-  creates channel 
-
-Workspace: 
-    contains channel 1:N
-
-Channel: 
-
-Message: 
-    user sends messages 
-    in channel/workspace 
-
-Invitation:
-    userid/inviter 
-    general invitation, no second userid needed
-
-
-
-*/
-
 CREATE TABLE Users (
     user_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_email TEXT NOT NULL UNIQUE,
