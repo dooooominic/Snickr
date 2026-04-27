@@ -35,6 +35,7 @@ CREATE TABLE Users (
 CREATE TABLE Workspaces (
     workspace_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     workspace_name TEXT NOT NULL,
+    workspace_description TEXT,
     workspace_creation_time TIMESTAMP NOT NULL DEFAULT now(),
     creator_id UUID NOT NULL REFERENCES users(user_id)
 );
