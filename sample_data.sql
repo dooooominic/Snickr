@@ -10,9 +10,9 @@ INSERT INTO users (user_id, user_email, username, nickname, password_hash, user_
   ('10000000-0000-0000-0000-000000000006', 'grace@university.edu', 'grace_phd',  'Grace', crypt('pass6', gen_salt('bf')), '2024-01-15 10:00:00');
 
 -- Workspaces: 20000000 prefix
-INSERT INTO workspaces (workspace_id, workspace_name, workspace_creation_time, creator_id) VALUES
-  ('20000000-0000-0000-0000-000000000001', 'CS Department', '2024-01-10 09:05:00', '10000000-0000-0000-0000-000000000001'),
-  ('20000000-0000-0000-0000-000000000002', 'Startup HQ',    '2024-02-01 08:10:00', '10000000-0000-0000-0000-000000000004');
+INSERT INTO workspaces (workspace_id, workspace_name, workspace_description, workspace_creation_time, creator_id) VALUES
+  ('20000000-0000-0000-0000-000000000001', 'CS Department', 'Faculty and TA collaboration space for the CS department.', '2024-01-10 09:05:00', '10000000-0000-0000-0000-000000000001'),
+  ('20000000-0000-0000-0000-000000000002', 'Startup HQ',    'Internal communication for our early-stage startup team.',  '2024-02-01 08:10:00', '10000000-0000-0000-0000-000000000004');
 
 -- Workspace memberships
 INSERT INTO workspace_membership (workspace_id, user_id, is_admin, joined_time) VALUES
