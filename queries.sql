@@ -37,7 +37,7 @@ SELECT
     w.workspace_id,
     w.workspace_name,
     u.user_id,
-    u.username,
+    u.username
 FROM workspaces w
 JOIN workspace_membership wm ON w.workspace_id = wm.workspace_id
 JOIN users u ON wm.user_id = u.user_id
