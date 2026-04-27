@@ -54,7 +54,7 @@ CREATE TABLE Workspace_Invitation (
     invitee_user_id UUID REFERENCES users(user_id),
     workspace_id UUID NOT NULL REFERENCES workspaces(workspace_id) ON DELETE CASCADE,
     invite_status TEXT NOT NULL DEFAULT 'pending'
-                        CHECK (invite_status IN ('pending', 'accepted', 'declined')),
+        CHECK (invite_status IN ('pending', 'accepted', 'declined')),
 
     invitation_time TIMESTAMP NOT NULL DEFAULT now(),
     responded_at TIMESTAMP,
