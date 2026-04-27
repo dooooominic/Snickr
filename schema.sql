@@ -120,3 +120,11 @@ CREATE TABLE Is_Seen (
         (is_seen = true  AND seen_time IS NOT NULL)
     )
 );
+
+CREATE UNIQUE INDEX uq_workspace_invite_pending
+    ON workspace_invitation (workspace_id, invitee_email)
+    WHERE invite_status = 'pending';
+
+CREATE UNIQUE INDEX uq_channel_invite_pending
+    ON channel_invitation (channel_id, invitee_user_id)
+    WHERE invite_status = 'pending';
