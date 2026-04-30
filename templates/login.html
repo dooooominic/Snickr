@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Snickr — Log in{% endblock %}
+{% block content %}
+<h1>Log in</h1>
+<form method="post" action="{{ url_for('login') }}">
+  <div style="margin-bottom:0.75rem">
+    <label for="username">Username</label><br>
+    <input type="text" id="username" name="username" required autofocus style="width:100%;max-width:320px;padding:0.4rem">
+  </div>
+  <div style="margin-bottom:0.75rem">
+    <label for="password">Password</label><br>
+    <input type="password" id="password" name="password" required style="width:100%;max-width:320px;padding:0.4rem">
+  </div>
+  <button type="submit">Log in</button>
+</form>
+{% endblock %}

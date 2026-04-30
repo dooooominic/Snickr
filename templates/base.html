@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Snickr{% endblock %}</title>
+  <style>
+    body { font-family: sans-serif; margin: 0; background: #f4f4f4; color: #222; }
+    nav { background: #4a154b; color: #fff; padding: 0.75rem 1.5rem; display: flex; align-items: center; gap: 1rem; }
+    nav a { color: #fff; text-decoration: none; font-weight: bold; }
+    nav .spacer { flex: 1; }
+    .container { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+    .flash { background: #ffe0e0; border: 1px solid #f99; padding: 0.5rem 1rem; margin-bottom: 1rem; border-radius: 4px; }
+    a { color: #4a154b; }
+    input, textarea, button { font-size: 1rem; }
+    button { background: #4a154b; color: #fff; border: none; padding: 0.5rem 1.25rem; cursor: pointer; border-radius: 4px; }
+    button:hover { background: #611f69; }
+  </style>
+</head>
+<body>
+<nav>
+  <a href="{{ url_for('index') }}">Snickr</a>
+  <span class="spacer"></span>
+  {% if session.user %}
+    <span>{{ session.user.username }}</span>
+    <a href="{{ url_for('logout') }}">Log out</a>
+  {% else %}
+    <a href="{{ url_for('login') }}">Log in</a>
+  {% endif %}
+</nav>
+<div class="container">
+  {% with messages = get_flashed_messages() %}
+    {% for msg in messages %}
+      <div class="flash">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</div>
+</body>
+</html>

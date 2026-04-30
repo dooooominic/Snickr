@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Snickr — #{{ channel.channel_name }}{% endblock %}
+{% block content %}
+<h1># {{ channel.channel_name }}</h1>
+
+<div style="background:#fff;border-radius:6px;padding:1rem;box-shadow:0 1px 3px rgba(0,0,0,.1);min-height:200px;margin-bottom:1rem">
+  {% if messages %}
+    {% for msg in messages %}
+      <div style="margin-bottom:0.75rem">
+        <strong>{{ msg.username }}</strong>
+        <span style="color:#888;font-size:0.8rem;margin-left:0.5rem">{{ msg.message_time.strftime('%Y-%m-%d %H:%M') }}</span>
+        <p style="margin:0.2rem 0 0">{{ msg.message_text }}</p>
+      </div>
+    {% endfor %}
+  {% else %}
+    <p style="color:#888">No messages yet. Be the first!</p>
+  {% endif %}
+</div>
+
+<form method="post" action="{{ url_for('post_message', channel_id=channel_id) }}">
+  <div style="display:flex;gap:0.5rem">
+    <input type="text" name="message_text" placeholder="Message #{{ channel.channel_name }}"
+           required style="flex:1;padding:0.5rem;border:1px solid #ccc;border-radius:4px">
+    <button type="submit">Send</button>
+  </div>
+</form>
+
+<p style="margin-top:1rem">
+  <a href="{{ url_for('workspace', workspace_id=channel.workspace_id) }}">&larr; Back to workspace</a>
+</p>
+{% endblock %}
