@@ -641,6 +641,45 @@ def respond_channel_invitation(invitation_id, action):
     return redirect(url_for("invitations"))
 
 
+@app.route("/search")
+@login_required
+def search():
+    user = current_user()
+    q = request.args.get("q", "").strip()
+
+    results = []
+    if q:
+        results = db.query(
+            """
+            SELECT
+                m.message_id,
+                m.message_time,
+                m.message_text,
+                c.channel_id,
+                c.channel_name,
+                c.channel_type,
+                w.workspace_id,
+                w.workspace_name,
+                u.username AS posted_by,
+                u.nickname AS posted_by_nickname
+            FROM messages m
+            JOIN channels c ON m.channel_id = c.channel_id
+            JOIN workspaces w ON c.workspace_id = w.workspace_id
+            JOIN users u ON m.user_id = u.user_id
+            JOIN channel_membership cm
+                ON cm.channel_id = c.channel_id AND cm.user_id = %s
+            JOIN workspace_membership wm
+                ON wm.workspace_id = w.workspace_id AND wm.user_id = %s
+            WHERE m.message_text ILIKE %s
+            ORDER BY m.message_time DESC
+            LIMIT 100
+            """,
+            (user["id"], user["id"], f"%{q}%"),
+        )
+
+    return render_template("search.html", q=q, results=results)
+
+
 @app.context_processor
 def inject_invitation_count():
     user = current_user()

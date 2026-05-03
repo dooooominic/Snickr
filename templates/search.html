@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Snickr — Search{% endblock %}
+{% block content %}
+<h1>Search messages</h1>
+
+<form method="get" action="{{ url_for('search') }}" style="margin-bottom:1rem">
+  <input type="text" name="q" value="{{ q }}" placeholder="Search keyword..." autofocus
+         style="width:100%;max-width:480px;padding:0.5rem;border:1px solid #ccc;border-radius:4px">
+  <button type="submit">Search</button>
+</form>
+
+{% if q %}
+  <p style="color:#666">
+    {{ results|length }} result{{ '' if results|length == 1 else 's' }} for &ldquo;{{ q }}&rdquo;
+  </p>
+
+  {% if results %}
+    <ul style="list-style:none;padding:0">
+      {% for r in results %}
+        <li style="background:#fff;border-radius:6px;padding:1rem;margin-bottom:0.75rem;box-shadow:0 1px 3px rgba(0,0,0,.1)">
+          <div style="color:#888;font-size:0.85rem;margin-bottom:0.25rem">
+            <a href="{{ url_for('channel', channel_id=r.channel_id) }}"># {{ r.channel_name }}</a>
+            <span>in {{ r.workspace_name }}</span>
+            <span style="margin:0 0.4rem">·</span>
+            <span>{{ r.posted_by }}</span>
+            <span style="margin:0 0.4rem">·</span>
+            <span>{{ r.message_time.strftime('%Y-%m-%d %H:%M') }}</span>
+          </div>
+          <p style="margin:0">{{ r.message_text }}</p>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+{% endif %}
+{% endblock %}
