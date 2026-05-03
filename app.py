@@ -47,18 +47,22 @@ def login():
         password = request.form.get("password", "")
 
         # Parameterized query — no string concatenation, safe from SQL injection.
+        # pgcrypto's crypt() recomputes the hash from the supplied password using the
+        # salt embedded in the stored hash; the row matches only if the password is right.
         rows = db.query(
-            "SELECT user_id, username, password_hash FROM users WHERE username = %s",
-            (username,),
+            """
+            SELECT user_id, username
+            FROM users
+            WHERE username = %s
+              AND password_hash = crypt(%s, password_hash)
+            """,
+            (username, password),
         )
 
         if rows:
             user = rows[0]
-            # TODO: replace with bcrypt / werkzeug check once password hashing is wired up.
-            # For now accept any non-empty password so the page is runnable against sample data.
-            if password:
-                session["user"] = {"id": str(user["user_id"]), "username": user["username"]}
-                return redirect(url_for("dashboard"))
+            session["user"] = {"id": str(user["user_id"]), "username": user["username"]}
+            return redirect(url_for("dashboard"))
 
         flash("Invalid username or password.")
     return render_template("login.html")
