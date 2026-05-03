@@ -114,6 +114,117 @@ def logout():
     return redirect(url_for("index"))
 
 
+@app.route("/workspaces/new", methods=["GET", "POST"])
+@login_required
+def new_workspace():
+    user = current_user()
+    if request.method == "POST":
+        name = request.form.get("workspace_name", "").strip()
+        description = request.form.get("workspace_description", "").strip() or None
+
+        if not name:
+            flash("Workspace name is required.")
+            return render_template("workspace_new.html")
+
+        with db.transaction() as cur:
+            cur.execute(
+                """
+                INSERT INTO workspaces (workspace_name, workspace_description, creator_id)
+                VALUES (%s, %s, %s)
+                RETURNING workspace_id
+                """,
+                (name, description, user["id"]),
+            )
+            new_id = cur.fetchone()["workspace_id"]
+            cur.execute(
+                """
+                INSERT INTO workspace_membership (workspace_id, user_id, is_admin)
+                VALUES (%s, %s, true)
+                """,
+                (new_id, user["id"]),
+            )
+
+        return redirect(url_for("workspace", workspace_id=new_id))
+
+    return render_template("workspace_new.html")
+
+
+@app.route("/workspace/<workspace_id>/channels/new", methods=["GET", "POST"])
+@login_required
+def new_channel(workspace_id):
+    user = current_user()
+
+    membership = db.query(
+        "SELECT 1 FROM workspace_membership WHERE workspace_id = %s AND user_id = %s",
+        (workspace_id, user["id"]),
+    )
+    if not membership:
+        flash("You don't have access to that workspace.")
+        return redirect(url_for("dashboard"))
+
+    if request.method == "POST":
+        name = request.form.get("channel_name", "").strip()
+        channel_type = request.form.get("channel_type", "")
+        other_username = request.form.get("other_username", "").strip()
+
+        if not name:
+            flash("Channel name is required.")
+            return render_template("channel_new.html", workspace_id=workspace_id)
+        if channel_type not in ("public", "private", "direct"):
+            flash("Invalid channel type.")
+            return render_template("channel_new.html", workspace_id=workspace_id)
+
+        other_user_id = None
+        if channel_type == "direct":
+            if not other_username:
+                flash("Direct channels require another user's username.")
+                return render_template("channel_new.html", workspace_id=workspace_id)
+            rows = db.query(
+                """
+                SELECT u.user_id
+                FROM users u
+                JOIN workspace_membership wm ON wm.user_id = u.user_id
+                WHERE u.username = %s AND wm.workspace_id = %s
+                """,
+                (other_username, workspace_id),
+            )
+            if not rows:
+                flash(f"User '{other_username}' isn't a member of this workspace.")
+                return render_template("channel_new.html", workspace_id=workspace_id)
+            other_user_id = str(rows[0]["user_id"])
+            if other_user_id == user["id"]:
+                flash("You can't create a direct channel with yourself.")
+                return render_template("channel_new.html", workspace_id=workspace_id)
+
+        try:
+            with db.transaction() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO channels (workspace_id, channel_name, channel_type, creator_id)
+                    VALUES (%s, %s, %s, %s)
+                    RETURNING channel_id
+                    """,
+                    (workspace_id, name, channel_type, user["id"]),
+                )
+                new_id = cur.fetchone()["channel_id"]
+                cur.execute(
+                    "INSERT INTO channel_membership (channel_id, user_id) VALUES (%s, %s)",
+                    (new_id, user["id"]),
+                )
+                if other_user_id:
+                    cur.execute(
+                        "INSERT INTO channel_membership (channel_id, user_id) VALUES (%s, %s)",
+                        (new_id, other_user_id),
+                    )
+        except psycopg2.errors.UniqueViolation:
+            flash(f"A channel called '{name}' already exists in this workspace.")
+            return render_template("channel_new.html", workspace_id=workspace_id)
+
+        return redirect(url_for("channel", channel_id=new_id))
+
+    return render_template("channel_new.html", workspace_id=workspace_id)
+
+
 @app.route("/dashboard")
 @login_required
 def dashboard():

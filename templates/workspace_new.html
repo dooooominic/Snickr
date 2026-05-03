@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Snickr — New workspace{% endblock %}
+{% block content %}
+<h1>Create a workspace</h1>
+<form method="post" action="{{ url_for('new_workspace') }}">
+  <div style="margin-bottom:0.75rem">
+    <label for="workspace_name">Workspace name</label><br>
+    <input type="text" id="workspace_name" name="workspace_name" required autofocus
+           style="width:100%;max-width:360px;padding:0.4rem">
+  </div>
+  <div style="margin-bottom:0.75rem">
+    <label for="workspace_description">Description <span style="color:#888;font-weight:normal">(optional)</span></label><br>
+    <textarea id="workspace_description" name="workspace_description" rows="3"
+              style="width:100%;max-width:360px;padding:0.4rem"></textarea>
+  </div>
+  <button type="submit">Create workspace</button>
+</form>
+<p style="margin-top:1rem"><a href="{{ url_for('dashboard') }}">&larr; Back to dashboard</a></p>
+{% endblock %}

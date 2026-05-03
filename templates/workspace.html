@@ -7,6 +7,7 @@
 {% endif %}
 
 <h2>Channels</h2>
+<p><a href="{{ url_for('new_channel', workspace_id=workspace_id) }}">+ New channel</a></p>
 {% if channels %}
   <ul style="list-style:none;padding:0">
     {% for ch in channels %}

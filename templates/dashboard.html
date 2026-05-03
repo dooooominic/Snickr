@@ -2,6 +2,7 @@
 {% block title %}Snickr — Dashboard{% endblock %}
 {% block content %}
 <h1>Your Workspaces</h1>
+<p><a href="{{ url_for('new_workspace') }}">+ New workspace</a></p>
 {% if workspaces %}
   <ul style="list-style:none;padding:0">
     {% for ws in workspaces %}
