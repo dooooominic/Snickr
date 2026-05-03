@@ -1,6 +1,7 @@
 import os
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from dotenv import load_dotenv
+import psycopg2
 import db
 
 load_dotenv()
@@ -66,6 +67,45 @@ def login():
 
         flash("Invalid username or password.")
     return render_template("login.html")
+
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "POST":
+        email = request.form.get("email", "").strip()
+        username = request.form.get("username", "").strip()
+        nickname = request.form.get("nickname", "").strip() or None
+        password = request.form.get("password", "")
+
+        if "@" not in email or "." not in email:
+            flash("Please enter a valid email address.")
+            return render_template("register.html")
+        if not username:
+            flash("Username is required.")
+            return render_template("register.html")
+        if len(password) < 6:
+            flash("Password must be at least 6 characters.")
+            return render_template("register.html")
+
+        try:
+            with db.transaction() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO users (user_email, username, nickname, password_hash)
+                    VALUES (%s, %s, %s, crypt(%s, gen_salt('bf')))
+                    RETURNING user_id, username
+                    """,
+                    (email, username, nickname, password),
+                )
+                new_user = cur.fetchone()
+        except psycopg2.errors.UniqueViolation:
+            flash("That email or username is already taken.")
+            return render_template("register.html")
+
+        session["user"] = {"id": str(new_user["user_id"]), "username": new_user["username"]}
+        return redirect(url_for("dashboard"))
+
+    return render_template("register.html")
 
 
 @app.route("/logout")
