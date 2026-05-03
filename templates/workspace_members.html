@@ -1,77 +1,91 @@
 {% extends "base.html" %}
 {% block title %}Snickr — {{ workspace_name }} members{% endblock %}
 {% block content %}
-<h1>{{ workspace_name }} — members</h1>
+<div class="px-8 py-6">
+  <h1 class="text-2xl font-black mb-6">{{ workspace_name }} — members</h1>
 
-<table class="table">
-  <thead>
-    <tr>
-      <th>User</th>
-      <th>Role</th>
-      <th>Joined</th>
-      {% if is_admin %}<th></th>{% endif %}
-    </tr>
-  </thead>
-  <tbody>
-    {% for m in members %}
-      <tr>
-        <td>
-          <strong>{{ m.username }}</strong>
-          {% if m.nickname %}<span class="muted">({{ m.nickname }})</span>{% endif %}
-        </td>
-        <td>
-          {% if m.is_admin %}
-            <span class="role-badge">Admin</span>
-          {% else %}
-            <span class="role-member">Member</span>
-          {% endif %}
-        </td>
-        <td class="muted">{{ m.joined_time.strftime('%b %d, %Y') }}</td>
-        {% if is_admin %}
-          <td style="text-align:right">
-            {% if not m.is_admin and m.user_id|string != current_user_id %}
-              <form method="post" action="{{ url_for('promote_member', workspace_id=workspace_id, member_id=m.user_id) }}" style="margin:0">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn-small">Promote to admin</button>
-              </form>
-            {% endif %}
-          </td>
-        {% endif %}
-      </tr>
-    {% endfor %}
-  </tbody>
-</table>
-
-{% if is_admin %}
-  <h2>Stale public-channel invitations</h2>
-  <p class="muted small">Pending invitations to public channels that are over 5 days old and have not been joined.</p>
-  {% if stale_invites %}
-    <table class="table">
-      <thead>
+  <div class="bg-white border border-gray-200 rounded-lg overflow-hidden mb-8">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 text-xs uppercase tracking-wider text-gray-500">
         <tr>
-          <th>Channel</th>
-          <th>Invitee</th>
-          <th>Invited by</th>
-          <th>Sent</th>
-          <th>Days stale</th>
+          <th class="text-left px-4 py-2">User</th>
+          <th class="text-left px-4 py-2">Role</th>
+          <th class="text-left px-4 py-2">Joined</th>
+          {% if is_admin %}<th class="px-4 py-2"></th>{% endif %}
         </tr>
       </thead>
-      <tbody>
-        {% for s in stale_invites %}
-          <tr>
-            <td><a href="{{ url_for('channel', channel_id=s.channel_id) }}"># {{ s.channel_name }}</a></td>
-            <td>{{ s.invitee }}{% if s.invitee_nickname %} <span class="muted">({{ s.invitee_nickname }})</span>{% endif %}</td>
-            <td>{{ s.invited_by }}</td>
-            <td class="muted">{{ s.invitation_time.strftime('%b %d, %Y') }}</td>
-            <td class="days-stale">{{ s.days_stale }}</td>
+      <tbody class="divide-y divide-gray-100">
+        {% for m in members %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-3">
+              <div class="flex items-center gap-3">
+                <span class="w-7 h-7 rounded flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                      style="background: {{ m.username|avatar_color }}">{{ m.username|initial }}</span>
+                <div>
+                  <div class="font-semibold">{{ m.username }}</div>
+                  {% if m.nickname %}<div class="text-xs text-gray-500">{{ m.nickname }}</div>{% endif %}
+                </div>
+              </div>
+            </td>
+            <td class="px-4 py-3">
+              {% if m.is_admin %}
+                <span class="bg-slack-side text-white text-xs font-bold px-2 py-0.5 rounded">Admin</span>
+              {% else %}
+                <span class="text-gray-500">Member</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 text-gray-500">{{ m.joined_time.strftime('%b %d, %Y') }}</td>
+            {% if is_admin %}
+              <td class="px-4 py-3 text-right">
+                {% if not m.is_admin and m.user_id|string != current_user_id %}
+                  <form method="post" action="{{ url_for('promote_member', workspace_id=workspace_id, member_id=m.user_id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="px-2 py-1 text-xs bg-slack-side text-white rounded hover:bg-slack-top">Promote to admin</button>
+                  </form>
+                {% endif %}
+              </td>
+            {% endif %}
           </tr>
         {% endfor %}
       </tbody>
     </table>
-  {% else %}
-    <div class="empty">No stale public-channel invitations.</div>
-  {% endif %}
-{% endif %}
+  </div>
 
-<a class="back-link" href="{{ url_for('workspace', workspace_id=workspace_id) }}">&larr; Back to workspace</a>
+  {% if is_admin %}
+    <h2 class="text-base font-bold mb-1">Stale public-channel invitations</h2>
+    <p class="text-sm text-gray-500 mb-3">Pending invitations to public channels that are over 5 days old and haven't been joined.</p>
+    {% if stale_invites %}
+      <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 text-xs uppercase tracking-wider text-gray-500">
+            <tr>
+              <th class="text-left px-4 py-2">Channel</th>
+              <th class="text-left px-4 py-2">Invitee</th>
+              <th class="text-left px-4 py-2">Invited by</th>
+              <th class="text-left px-4 py-2">Sent</th>
+              <th class="text-left px-4 py-2">Days stale</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            {% for s in stale_invites %}
+              <tr class="hover:bg-gray-50">
+                <td class="px-4 py-3"><a href="{{ url_for('channel', channel_id=s.channel_id) }}" class="text-slack-active hover:underline"># {{ s.channel_name }}</a></td>
+                <td class="px-4 py-3">{{ s.invitee }}{% if s.invitee_nickname %} <span class="text-gray-500">({{ s.invitee_nickname }})</span>{% endif %}</td>
+                <td class="px-4 py-3">{{ s.invited_by }}</td>
+                <td class="px-4 py-3 text-gray-500">{{ s.invitation_time.strftime('%b %d, %Y') }}</td>
+                <td class="px-4 py-3 text-slack-accent font-semibold">{{ s.days_stale }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="text-center py-8 text-gray-500 border-2 border-dashed border-gray-200 rounded-lg">
+        No stale public-channel invitations.
+      </div>
+    {% endif %}
+  {% endif %}
+
+  <a href="{{ url_for('workspace', workspace_id=workspace_id) }}" class="inline-block mt-6 text-sm text-gray-500 hover:underline">&larr; Back to workspace</a>
+</div>
 {% endblock %}

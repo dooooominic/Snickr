@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Snickr — Welcome{% endblock %}
 {% block content %}
-<h1>Welcome to Snickr</h1>
-<p>A team messaging app. <a href="{{ url_for('login') }}">Log in</a> or <a href="{{ url_for('register') }}">sign up</a> to get started.</p>
+<div class="text-center py-16">
+  <h1 class="text-4xl font-black tracking-tight mb-3">Snickr</h1>
+  <p class="text-lg text-gray-600 mb-8">A team messaging app, by the makers of CS6083.</p>
+  <div class="flex gap-3 justify-center">
+    <a href="{{ url_for('login') }}" class="px-6 py-2 bg-slack-side text-white rounded font-semibold hover:bg-slack-top">Log in</a>
+    <a href="{{ url_for('register') }}" class="px-6 py-2 border-2 border-slack-side text-slack-side rounded font-semibold hover:bg-slack-side hover:text-white">Sign up</a>
+  </div>
+</div>
 {% endblock %}

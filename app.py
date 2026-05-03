@@ -1,8 +1,10 @@
 import os
+import re
 import secrets
 from datetime import datetime
 from functools import wraps
 from flask import Flask, render_template, request, redirect, url_for, session, flash, abort
+from markupsafe import Markup, escape
 from dotenv import load_dotenv
 import psycopg2
 import db
@@ -81,6 +83,101 @@ def csrf_protect():
 @app.context_processor
 def inject_csrf_token():
     return {"csrf_token": csrf_token}
+
+
+# ---------------------------------------------------------------------------
+# Workspace context (for sidebar) + user workspaces (for rail)
+# ---------------------------------------------------------------------------
+
+def _workspace_context(workspace_id, user_id, active_channel_id=None):
+    rows = db.query(
+        "SELECT workspace_id, workspace_name, workspace_description FROM workspaces WHERE workspace_id = %s",
+        (workspace_id,),
+    )
+    if not rows:
+        return None
+    channels = db.query(
+        """
+        SELECT
+            c.channel_id, c.channel_name, c.channel_type,
+            (
+                SELECT COUNT(*) FROM messages m
+                WHERE m.channel_id = c.channel_id
+                  AND m.user_id <> %s
+                  AND NOT EXISTS (
+                      SELECT 1 FROM is_seen s
+                      WHERE s.message_id = m.message_id
+                        AND s.user_id = %s AND s.is_seen = true
+                  )
+            ) AS unread_count
+        FROM channels c
+        JOIN channel_membership cm ON c.channel_id = cm.channel_id
+        WHERE c.workspace_id = %s AND cm.user_id = %s
+        ORDER BY
+          CASE c.channel_type WHEN 'public' THEN 0 WHEN 'private' THEN 1 ELSE 2 END,
+          c.channel_name
+        """,
+        (user_id, user_id, workspace_id, user_id),
+    )
+    return {
+        "active_workspace": rows[0],
+        "active_channel_id": str(active_channel_id) if active_channel_id else None,
+        "workspace_channels": channels,
+    }
+
+
+@app.context_processor
+def inject_user_workspaces():
+    user = current_user()
+    if not user:
+        return {"user_workspaces": []}
+    rows = db.query(
+        """
+        SELECT w.workspace_id, w.workspace_name
+        FROM workspaces w
+        JOIN workspace_membership wm ON w.workspace_id = wm.workspace_id
+        WHERE wm.user_id = %s
+        ORDER BY w.workspace_name
+        """,
+        (user["id"],),
+    )
+    return {"user_workspaces": rows}
+
+
+# ---------------------------------------------------------------------------
+# Template filters
+# ---------------------------------------------------------------------------
+
+_AVATAR_PALETTE = [
+    "#E91E63", "#9C27B0", "#673AB7", "#3F51B5",
+    "#2196F3", "#0EA5E9", "#06B6D4", "#0D9488",
+    "#16A34A", "#65A30D", "#CA8A04", "#EA580C",
+    "#DC2626", "#DB2777",
+]
+
+
+@app.template_filter("avatar_color")
+def avatar_color(name):
+    h = sum(ord(c) for c in (name or ""))
+    return _AVATAR_PALETTE[h % len(_AVATAR_PALETTE)]
+
+
+@app.template_filter("initial")
+def initial(name):
+    return (name or "?")[0].upper()
+
+
+@app.template_filter("highlight")
+def highlight(text, term):
+    if not term or not text:
+        return text
+    escaped_text = str(escape(text))
+    pattern = re.compile(re.escape(term), re.IGNORECASE)
+    result = pattern.sub(
+        lambda m: f'<mark class="bg-yellow-200 text-black px-0.5 rounded">{m.group()}</mark>',
+        escaped_text,
+    )
+    return Markup(result)
 
 
 @app.template_filter("relative_time")
@@ -248,16 +345,16 @@ def new_channel(workspace_id):
 
         if not name:
             flash("Channel name is required.")
-            return render_template("channel_new.html", workspace_id=workspace_id)
+            return render_template("channel_new.html", workspace_id=workspace_id, **(_workspace_context(workspace_id, user["id"]) or {}))
         if channel_type not in ("public", "private", "direct"):
             flash("Invalid channel type.")
-            return render_template("channel_new.html", workspace_id=workspace_id)
+            return render_template("channel_new.html", workspace_id=workspace_id, **(_workspace_context(workspace_id, user["id"]) or {}))
 
         other_user_id = None
         if channel_type == "direct":
             if not other_username:
                 flash("Direct channels require another user's username.")
-                return render_template("channel_new.html", workspace_id=workspace_id)
+                return render_template("channel_new.html", workspace_id=workspace_id, **(_workspace_context(workspace_id, user["id"]) or {}))
             rows = db.query(
                 """
                 SELECT u.user_id
@@ -269,11 +366,11 @@ def new_channel(workspace_id):
             )
             if not rows:
                 flash(f"User '{other_username}' isn't a member of this workspace.")
-                return render_template("channel_new.html", workspace_id=workspace_id)
+                return render_template("channel_new.html", workspace_id=workspace_id, **(_workspace_context(workspace_id, user["id"]) or {}))
             other_user_id = str(rows[0]["user_id"])
             if other_user_id == user["id"]:
                 flash("You can't create a direct channel with yourself.")
-                return render_template("channel_new.html", workspace_id=workspace_id)
+                return render_template("channel_new.html", workspace_id=workspace_id, **(_workspace_context(workspace_id, user["id"]) or {}))
 
         try:
             with db.transaction() as cur:
@@ -297,11 +394,11 @@ def new_channel(workspace_id):
                     )
         except psycopg2.errors.UniqueViolation:
             flash(f"A channel called '{name}' already exists in this workspace.")
-            return render_template("channel_new.html", workspace_id=workspace_id)
+            return render_template("channel_new.html", workspace_id=workspace_id, **(_workspace_context(workspace_id, user["id"]) or {}))
 
         return redirect(url_for("channel", channel_id=new_id))
 
-    return render_template("channel_new.html", workspace_id=workspace_id)
+    return render_template("channel_new.html", workspace_id=workspace_id, **(_workspace_context(workspace_id, user["id"]) or {}))
 
 
 @app.route("/dashboard")
@@ -333,43 +430,17 @@ def workspace(workspace_id):
     if not membership:
         flash("You don't have access to that workspace.")
         return redirect(url_for("dashboard"))
-    is_admin = membership[0]["is_admin"]
 
-    ws = db.query(
-        "SELECT workspace_name, workspace_description FROM workspaces WHERE workspace_id = %s",
-        (workspace_id,),
-    )
-    channels = db.query(
-        """
-        SELECT
-            c.channel_id,
-            c.channel_name,
-            c.channel_type,
-            (
-                SELECT COUNT(*) FROM messages m
-                WHERE m.channel_id = c.channel_id
-                  AND m.user_id <> %s
-                  AND NOT EXISTS (
-                      SELECT 1 FROM is_seen s
-                      WHERE s.message_id = m.message_id
-                        AND s.user_id = %s
-                        AND s.is_seen = true
-                  )
-            ) AS unread_count
-        FROM channels c
-        JOIN channel_membership cm ON c.channel_id = cm.channel_id
-        WHERE c.workspace_id = %s AND cm.user_id = %s
-        ORDER BY c.channel_name
-        """,
-        (user["id"], user["id"], workspace_id, user["id"]),
-    )
+    ctx = _workspace_context(workspace_id, user["id"])
+    if not ctx:
+        flash("Workspace not found.")
+        return redirect(url_for("dashboard"))
+
     return render_template(
         "workspace.html",
-        user=user,
-        workspace=ws[0] if ws else {},
         workspace_id=workspace_id,
-        channels=channels,
-        is_admin=is_admin,
+        is_admin=membership[0]["is_admin"],
+        **ctx,
     )
 
 
@@ -393,9 +464,14 @@ def channel(channel_id):
         """,
         (channel_id,),
     )
+    if not ch:
+        flash("Channel not found.")
+        return redirect(url_for("dashboard"))
+    workspace_id = str(ch[0]["workspace_id"])
+
     messages = db.query(
         """
-        SELECT m.message_text, m.message_time, u.username
+        SELECT m.message_id, m.message_text, m.message_time, u.username
         FROM messages m
         JOIN users u ON m.user_id = u.user_id
         WHERE m.channel_id = %s
@@ -403,6 +479,23 @@ def channel(channel_id):
         """,
         (channel_id,),
     )
+
+    unread_rows = db.query(
+        """
+        SELECT m.message_id
+        FROM messages m
+        WHERE m.channel_id = %s
+          AND m.user_id <> %s
+          AND NOT EXISTS (
+              SELECT 1 FROM is_seen s
+              WHERE s.message_id = m.message_id
+                AND s.user_id = %s
+                AND s.is_seen = true
+          )
+        """,
+        (channel_id, user["id"], user["id"]),
+    )
+    unread_ids = {str(r["message_id"]) for r in unread_rows}
 
     db.execute(
         """
@@ -417,12 +510,15 @@ def channel(channel_id):
         (user["id"], channel_id),
     )
 
+    ctx = _workspace_context(workspace_id, user["id"], active_channel_id=channel_id)
+
     return render_template(
         "channel.html",
-        user=user,
-        channel=ch[0] if ch else {},
+        channel=ch[0],
         channel_id=channel_id,
         messages=messages,
+        unread_ids=unread_ids,
+        **ctx,
     )
 
 
@@ -471,7 +567,7 @@ def invite_to_workspace(workspace_id):
 
         if "@" not in invitee_email or "." not in invitee_email:
             flash("Please enter a valid email address.")
-            return render_template("workspace_invite.html", workspace_id=workspace_id, workspace_name=workspace_name)
+            return render_template("workspace_invite.html", workspace_id=workspace_id, workspace_name=workspace_name, **(_workspace_context(workspace_id, user["id"]) or {}))
 
         existing = db.query("SELECT user_id FROM users WHERE user_email = %s", (invitee_email,))
         invitee_user_id = str(existing[0]["user_id"]) if existing else None
@@ -483,7 +579,7 @@ def invite_to_workspace(workspace_id):
             )
             if already:
                 flash(f"{invitee_email} is already a member of this workspace.")
-                return render_template("workspace_invite.html", workspace_id=workspace_id, workspace_name=workspace_name)
+                return render_template("workspace_invite.html", workspace_id=workspace_id, workspace_name=workspace_name, **(_workspace_context(workspace_id, user["id"]) or {}))
 
         try:
             db.execute(
@@ -496,12 +592,12 @@ def invite_to_workspace(workspace_id):
             )
         except psycopg2.errors.UniqueViolation:
             flash(f"There's already a pending invitation for {invitee_email}.")
-            return render_template("workspace_invite.html", workspace_id=workspace_id, workspace_name=workspace_name)
+            return render_template("workspace_invite.html", workspace_id=workspace_id, workspace_name=workspace_name, **(_workspace_context(workspace_id, user["id"]) or {}))
 
         flash(f"Invitation sent to {invitee_email}.")
         return redirect(url_for("workspace", workspace_id=workspace_id))
 
-    return render_template("workspace_invite.html", workspace_id=workspace_id, workspace_name=workspace_name)
+    return render_template("workspace_invite.html", workspace_id=workspace_id, workspace_name=workspace_name, **(_workspace_context(workspace_id, user["id"]) or {}))
 
 
 @app.route("/channel/<channel_id>/invite", methods=["GET", "POST"])
@@ -534,7 +630,7 @@ def invite_to_channel(channel_id):
         username = request.form.get("invitee_username", "").strip()
         if not username:
             flash("Username is required.")
-            return render_template("channel_invite.html", channel_id=channel_id, channel=channel)
+            return render_template("channel_invite.html", channel_id=channel_id, channel=channel, **(_workspace_context(str(channel["workspace_id"]), user["id"], active_channel_id=channel_id) or {}))
 
         rows = db.query(
             """
@@ -547,12 +643,12 @@ def invite_to_channel(channel_id):
         )
         if not rows:
             flash(f"User '{username}' isn't a member of this workspace.")
-            return render_template("channel_invite.html", channel_id=channel_id, channel=channel)
+            return render_template("channel_invite.html", channel_id=channel_id, channel=channel, **(_workspace_context(str(channel["workspace_id"]), user["id"], active_channel_id=channel_id) or {}))
         invitee_user_id = str(rows[0]["user_id"])
 
         if invitee_user_id == user["id"]:
             flash("You can't invite yourself.")
-            return render_template("channel_invite.html", channel_id=channel_id, channel=channel)
+            return render_template("channel_invite.html", channel_id=channel_id, channel=channel, **(_workspace_context(str(channel["workspace_id"]), user["id"], active_channel_id=channel_id) or {}))
 
         already = db.query(
             "SELECT 1 FROM channel_membership WHERE channel_id = %s AND user_id = %s",
@@ -560,7 +656,7 @@ def invite_to_channel(channel_id):
         )
         if already:
             flash(f"{username} is already in this channel.")
-            return render_template("channel_invite.html", channel_id=channel_id, channel=channel)
+            return render_template("channel_invite.html", channel_id=channel_id, channel=channel, **(_workspace_context(str(channel["workspace_id"]), user["id"], active_channel_id=channel_id) or {}))
 
         try:
             db.execute(
@@ -572,12 +668,12 @@ def invite_to_channel(channel_id):
             )
         except psycopg2.errors.UniqueViolation:
             flash(f"{username} already has a pending invitation to this channel.")
-            return render_template("channel_invite.html", channel_id=channel_id, channel=channel)
+            return render_template("channel_invite.html", channel_id=channel_id, channel=channel, **(_workspace_context(str(channel["workspace_id"]), user["id"], active_channel_id=channel_id) or {}))
 
         flash(f"Invitation sent to {username}.")
         return redirect(url_for("channel", channel_id=channel_id))
 
-    return render_template("channel_invite.html", channel_id=channel_id, channel=channel)
+    return render_template("channel_invite.html", channel_id=channel_id, channel=channel, **(_workspace_context(str(channel["workspace_id"]), user["id"], active_channel_id=channel_id) or {}))
 
 
 @app.route("/invitations")
@@ -794,6 +890,7 @@ def workspace_members(workspace_id):
             (workspace_id,),
         )
 
+    ctx = _workspace_context(workspace_id, user["id"]) or {}
     return render_template(
         "workspace_members.html",
         workspace_id=workspace_id,
@@ -802,6 +899,7 @@ def workspace_members(workspace_id):
         members=members,
         stale_invites=stale_invites,
         current_user_id=user["id"],
+        **ctx,
     )
 
 

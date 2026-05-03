@@ -4,32 +4,131 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Snickr{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'slack-rail':       '#19171D',
+            'slack-rail-hover': '#2C2A30',
+            'slack-side':       '#3F0E40',
+            'slack-side-hover': '#350D36',
+            'slack-active':     '#1164A3',
+            'slack-top':        '#350D36',
+            'slack-accent':     '#E01E5A',
+          },
+          fontFamily: {
+            sans: ['Lato', 'system-ui', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body>
-<nav>
-  <a href="{{ url_for('index') }}">Snickr</a>
-  <span class="spacer"></span>
-  {% if session.user %}
-    <form class="search-form" method="get" action="{{ url_for('search') }}" style="margin:0">
-      <input type="text" name="q" placeholder="Search messages...">
-    </form>
-    <a href="{{ url_for('invitations') }}">
-      Invitations{% if pending_invitation_count %} ({{ pending_invitation_count }}){% endif %}
-    </a>
-    <span class="username">{{ session.user.username }}</span>
-    <a href="{{ url_for('logout') }}">Log out</a>
-  {% else %}
-    <a href="{{ url_for('login') }}">Log in</a>
-  {% endif %}
-</nav>
-<div class="container">
-  {% with messages = get_flashed_messages() %}
-    {% for msg in messages %}
-      <div class="flash">{{ msg }}</div>
-    {% endfor %}
-  {% endwith %}
-  {% block content %}{% endblock %}
-</div>
+<body class="h-screen flex flex-col font-sans text-[#1D1C1D] bg-white antialiased overflow-hidden">
+
+  <!-- Top bar -->
+  <header class="bg-slack-top text-white h-12 flex items-center px-4 gap-4 flex-shrink-0">
+    <a href="{{ url_for('index') }}" class="font-black tracking-tight">Snickr</a>
+    {% if session.user %}
+      <form class="flex-1 max-w-xl mx-auto" method="get" action="{{ url_for('search') }}">
+        <input type="text" name="q" placeholder="Search messages"
+               class="w-full px-3 py-1.5 rounded bg-white/15 placeholder:text-white/60 text-white text-sm border border-white/10 focus:outline-none focus:ring-2 focus:ring-white/40">
+      </form>
+      <a href="{{ url_for('invitations') }}" class="text-sm hover:underline whitespace-nowrap">
+        Invitations{% if pending_invitation_count %} <span class="ml-1 inline-flex items-center justify-center bg-slack-accent text-white text-[11px] font-bold rounded-full w-5 h-5">{{ pending_invitation_count }}</span>{% endif %}
+      </a>
+      <span class="text-sm opacity-80">{{ session.user.username }}</span>
+      <a href="{{ url_for('logout') }}" class="text-sm hover:underline">Log out</a>
+    {% else %}
+      <span class="flex-1"></span>
+      <a href="{{ url_for('login') }}" class="text-sm hover:underline">Log in</a>
+    {% endif %}
+  </header>
+
+  <!-- Main row -->
+  <div class="flex flex-1 overflow-hidden">
+
+    {% if session.user %}
+      <!-- Workspaces rail -->
+      <aside class="w-16 bg-slack-rail flex flex-col items-center py-3 gap-2 flex-shrink-0">
+        {% for ws in user_workspaces %}
+          {% set is_active = active_workspace and ws.workspace_id|string == active_workspace.workspace_id|string %}
+          <a href="{{ url_for('workspace', workspace_id=ws.workspace_id) }}"
+             title="{{ ws.workspace_name }}"
+             class="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-sm
+                    {% if is_active %}ring-2 ring-white{% else %}hover:opacity-80{% endif %}"
+             style="background: {{ ws.workspace_name|avatar_color }}">
+            {{ ws.workspace_name|initial }}
+          </a>
+        {% endfor %}
+        <a href="{{ url_for('new_workspace') }}" title="New workspace"
+           class="w-10 h-10 rounded-lg flex items-center justify-center bg-white/10 text-white text-xl hover:bg-white/20">+</a>
+      </aside>
+    {% endif %}
+
+    {% if active_workspace %}
+      <!-- Channel sidebar -->
+      <aside class="w-60 bg-slack-side text-white/85 flex-shrink-0 overflow-y-auto">
+        <div class="px-4 py-3 border-b border-white/10">
+          <h2 class="font-black text-base text-white truncate">{{ active_workspace.workspace_name }}</h2>
+        </div>
+
+        <div class="px-2 py-2">
+          <div class="text-xs uppercase tracking-wider text-white/60 px-2 mb-1">Channels</div>
+          {% for ch in workspace_channels if ch.channel_type != 'direct' %}
+            {% set is_active = active_channel_id and ch.channel_id|string == active_channel_id %}
+            <a href="{{ url_for('channel', channel_id=ch.channel_id) }}"
+               class="flex items-center justify-between px-2 py-1 rounded text-sm
+                      {% if is_active %}bg-slack-active text-white{% else %}hover:bg-white/10{% endif %}
+                      {% if ch.unread_count and not is_active %}font-bold text-white{% endif %}">
+              <span class="truncate">
+                {% if ch.channel_type == 'private' %}🔒{% else %}#{% endif %} {{ ch.channel_name }}
+              </span>
+              {% if ch.unread_count and not is_active %}
+                <span class="ml-1 inline-flex items-center justify-center bg-slack-accent text-white text-[10px] font-bold rounded-full px-1.5 min-w-[18px] h-[18px]">{{ ch.unread_count }}</span>
+              {% endif %}
+            </a>
+          {% endfor %}
+          <a href="{{ url_for('new_channel', workspace_id=active_workspace.workspace_id) }}"
+             class="block px-2 py-1 rounded text-sm text-white/70 hover:bg-white/10 mt-1">+ Add channel</a>
+
+          <div class="text-xs uppercase tracking-wider text-white/60 px-2 mt-4 mb-1">Direct messages</div>
+          {% for ch in workspace_channels if ch.channel_type == 'direct' %}
+            {% set is_active = active_channel_id and ch.channel_id|string == active_channel_id %}
+            <a href="{{ url_for('channel', channel_id=ch.channel_id) }}"
+               class="flex items-center justify-between px-2 py-1 rounded text-sm
+                      {% if is_active %}bg-slack-active text-white{% else %}hover:bg-white/10{% endif %}
+                      {% if ch.unread_count and not is_active %}font-bold text-white{% endif %}">
+              <span class="truncate">@ {{ ch.channel_name }}</span>
+              {% if ch.unread_count and not is_active %}
+                <span class="ml-1 inline-flex items-center justify-center bg-slack-accent text-white text-[10px] font-bold rounded-full px-1.5 min-w-[18px] h-[18px]">{{ ch.unread_count }}</span>
+              {% endif %}
+            </a>
+          {% endfor %}
+
+          <div class="text-xs uppercase tracking-wider text-white/60 px-2 mt-4 mb-1">Workspace</div>
+          <a href="{{ url_for('workspace_members', workspace_id=active_workspace.workspace_id) }}"
+             class="block px-2 py-1 rounded text-sm hover:bg-white/10">Members</a>
+        </div>
+      </aside>
+    {% endif %}
+
+    <!-- Main content -->
+    <main class="flex-1 overflow-y-auto bg-white">
+      <div class="{% if active_workspace %}{% else %}max-w-3xl mx-auto px-6 py-8{% endif %}">
+        {% with messages = get_flashed_messages() %}
+          {% for msg in messages %}
+            <div class="{% if active_workspace %}mx-6 mt-4{% endif %} mb-3 px-4 py-2 bg-red-50 border border-red-200 text-red-900 rounded text-sm">{{ msg }}</div>
+          {% endfor %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+  </div>
+
 </body>
 </html>

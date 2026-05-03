@@ -1,30 +1,75 @@
 {% extends "base.html" %}
 {% block title %}Snickr — #{{ channel.channel_name }}{% endblock %}
 {% block content %}
-<h1># {{ channel.channel_name }}</h1>
-{% if channel.channel_type != 'direct' %}
-  <p><a href="{{ url_for('invite_to_channel', channel_id=channel_id) }}">+ Invite to channel</a></p>
-{% endif %}
+<div class="flex flex-col h-full">
+  <!-- Channel header -->
+  <div class="border-b border-gray-200 px-6 py-3 flex items-center justify-between flex-shrink-0">
+    <div>
+      <h1 class="font-black text-base">
+        {% if channel.channel_type == 'private' %}🔒{% elif channel.channel_type == 'direct' %}@{% else %}#{% endif %}
+        {{ channel.channel_name }}
+      </h1>
+      <p class="text-xs text-gray-500">{{ channel.channel_type }} channel</p>
+    </div>
+    {% if channel.channel_type != 'direct' %}
+      <a href="{{ url_for('invite_to_channel', channel_id=channel_id) }}"
+         class="text-sm text-slack-active hover:underline">+ Invite to channel</a>
+    {% endif %}
+  </div>
 
-<div class="messages">
-  {% if messages %}
-    {% for msg in messages %}
-      <div class="message">
-        <span class="message-author">{{ msg.username }}</span>
-        <span class="message-time">{{ msg.message_time|relative_time }}</span>
-        <p class="message-text">{{ msg.message_text }}</p>
-      </div>
-    {% endfor %}
-  {% else %}
-    <p class="muted" style="text-align:center;margin:1.5rem 0">No messages yet. Be the first.</p>
-  {% endif %}
+  <!-- Messages -->
+  <div class="flex-1 overflow-y-auto px-6 py-4">
+    {% if messages %}
+      {% set ns = namespace(divider_shown=false, prev_author=None, prev_time=None) %}
+      {% for msg in messages %}
+        {% set is_unread = msg.message_id|string in unread_ids %}
+        {% if is_unread and not ns.divider_shown %}
+          <div class="flex items-center gap-2 my-3">
+            <div class="flex-1 h-px bg-slack-accent"></div>
+            <span class="text-xs font-bold text-slack-accent px-2 bg-white">New</span>
+            <div class="flex-1 h-px bg-slack-accent"></div>
+          </div>
+          {% set ns.divider_shown = true %}
+        {% endif %}
+
+        {% set is_grouped = ns.prev_author == msg.username and ns.prev_time and (msg.message_time - ns.prev_time).total_seconds() < 300 %}
+
+        <div class="group flex gap-3 px-2 py-1 -mx-2 rounded {% if is_unread %}bg-yellow-50{% else %}hover:bg-gray-50{% endif %}">
+          {% if is_grouped %}
+            <div class="w-9 flex-shrink-0 text-[10px] text-gray-400 text-right pt-1 opacity-0 group-hover:opacity-100">
+              {{ msg.message_time.strftime('%H:%M') }}
+            </div>
+          {% else %}
+            <div class="w-9 h-9 rounded flex-shrink-0 flex items-center justify-center text-white font-bold text-sm"
+                 style="background: {{ msg.username|avatar_color }}">{{ msg.username|initial }}</div>
+          {% endif %}
+          <div class="flex-1 min-w-0">
+            {% if not is_grouped %}
+              <div class="flex items-baseline gap-2">
+                <span class="font-bold text-sm">{{ msg.username }}</span>
+                <span class="text-xs text-gray-500">{{ msg.message_time|relative_time }}</span>
+              </div>
+            {% endif %}
+            <p class="text-sm">{{ msg.message_text }}</p>
+          </div>
+        </div>
+
+        {% set ns.prev_author = msg.username %}
+        {% set ns.prev_time = msg.message_time %}
+      {% endfor %}
+    {% else %}
+      <div class="text-center text-gray-500 py-12">No messages yet. Be the first.</div>
+    {% endif %}
+  </div>
+
+  <!-- Composer -->
+  <div class="border-t border-gray-200 px-6 py-3 flex-shrink-0">
+    <form method="post" action="{{ url_for('post_message', channel_id=channel_id) }}" class="flex gap-2">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="text" name="message_text" placeholder="Message #{{ channel.channel_name }}" required autofocus
+             class="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-slack-side/30 focus:border-slack-side text-sm">
+      <button type="submit" class="px-4 py-2 bg-slack-side text-white font-semibold rounded hover:bg-slack-top text-sm">Send</button>
+    </form>
+  </div>
 </div>
-
-<form class="message-form" method="post" action="{{ url_for('post_message', channel_id=channel_id) }}">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  <input type="text" name="message_text" placeholder="Message #{{ channel.channel_name }}" required>
-  <button type="submit">Send</button>
-</form>
-
-<a class="back-link" href="{{ url_for('workspace', workspace_id=channel.workspace_id) }}">&larr; Back to workspace</a>
 {% endblock %}

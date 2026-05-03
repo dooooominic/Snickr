@@ -1,38 +1,60 @@
 {% extends "base.html" %}
-{% block title %}Snickr — {{ workspace.workspace_name }}{% endblock %}
+{% block title %}Snickr — {{ active_workspace.workspace_name }}{% endblock %}
 {% block content %}
-<h1>{{ workspace.workspace_name }}</h1>
-{% if workspace.workspace_description %}
-  <p class="muted">{{ workspace.workspace_description }}</p>
-{% endif %}
-
-<p>
-  <a href="{{ url_for('workspace_members', workspace_id=workspace_id) }}">View members</a>
-  {% if is_admin %}
-    &nbsp;·&nbsp; <a href="{{ url_for('invite_to_workspace', workspace_id=workspace_id) }}">+ Invite people</a>
+<div class="px-8 py-6">
+  <h1 class="text-2xl font-black mb-1">{{ active_workspace.workspace_name }}</h1>
+  {% if active_workspace.workspace_description %}
+    <p class="text-gray-600 mb-4">{{ active_workspace.workspace_description }}</p>
   {% endif %}
-</p>
 
-<h2>Channels</h2>
-<p><a href="{{ url_for('new_channel', workspace_id=workspace_id) }}">+ New channel</a></p>
-{% if channels %}
-  <ul class="card-list">
-    {% for ch in channels %}
-      <li class="card">
-        <a href="{{ url_for('channel', channel_id=ch.channel_id) }}"
-           class="{% if ch.unread_count %}channel-unread{% endif %}">
-          # {{ ch.channel_name }}
-        </a>
-        <span class="channel-type">({{ ch.channel_type }})</span>
-        {% if ch.unread_count %}
-          <span class="unread-badge">{{ ch.unread_count }}</span>
+  <div class="flex gap-3 text-sm mb-8">
+    <a href="{{ url_for('workspace_members', workspace_id=workspace_id) }}" class="text-slack-active hover:underline">View members</a>
+    {% if is_admin %}
+      <span class="text-gray-300">·</span>
+      <a href="{{ url_for('invite_to_workspace', workspace_id=workspace_id) }}" class="text-slack-active hover:underline">+ Invite people</a>
+    {% endif %}
+  </div>
+
+  <div class="grid md:grid-cols-2 gap-6">
+    <div>
+      <h2 class="text-sm uppercase tracking-wider text-gray-500 font-bold mb-3">Channels</h2>
+      {% if workspace_channels %}
+        <ul class="space-y-1">
+          {% for ch in workspace_channels %}
+            <li class="flex items-center justify-between px-3 py-2 bg-gray-50 rounded hover:bg-gray-100">
+              <a href="{{ url_for('channel', channel_id=ch.channel_id) }}" class="flex-1 {% if ch.unread_count %}font-bold{% endif %}">
+                {% if ch.channel_type == 'private' %}🔒{% elif ch.channel_type == 'direct' %}@{% else %}#{% endif %}
+                {{ ch.channel_name }}
+                <span class="text-gray-400 text-xs ml-1">({{ ch.channel_type }})</span>
+              </a>
+              {% if ch.unread_count %}
+                <span class="bg-slack-accent text-white text-xs font-bold rounded-full px-2 py-0.5">{{ ch.unread_count }}</span>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <div class="text-center py-8 text-gray-500 border-2 border-dashed border-gray-200 rounded">
+          No channels yet.
+        </div>
+      {% endif %}
+      <a href="{{ url_for('new_channel', workspace_id=workspace_id) }}"
+         class="inline-block mt-3 text-sm text-slack-active hover:underline">+ New channel</a>
+    </div>
+
+    <div>
+      <h2 class="text-sm uppercase tracking-wider text-gray-500 font-bold mb-3">Quick actions</h2>
+      <div class="space-y-2">
+        <a href="{{ url_for('workspace_members', workspace_id=workspace_id) }}"
+           class="block px-3 py-2 bg-gray-50 rounded hover:bg-gray-100 text-sm">Browse members</a>
+        {% if is_admin %}
+          <a href="{{ url_for('invite_to_workspace', workspace_id=workspace_id) }}"
+             class="block px-3 py-2 bg-gray-50 rounded hover:bg-gray-100 text-sm">Invite someone new</a>
         {% endif %}
-      </li>
-    {% endfor %}
-  </ul>
-{% else %}
-  <div class="empty">No channels yet. Create one to get started.</div>
-{% endif %}
-
-<a class="back-link" href="{{ url_for('dashboard') }}">&larr; Back to dashboard</a>
+        <a href="{{ url_for('new_channel', workspace_id=workspace_id) }}"
+           class="block px-3 py-2 bg-gray-50 rounded hover:bg-gray-100 text-sm">Create a channel</a>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}

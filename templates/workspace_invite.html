@@ -1,17 +1,18 @@
 {% extends "base.html" %}
 {% block title %}Snickr — Invite to {{ workspace_name }}{% endblock %}
 {% block content %}
-<h1>Invite someone to {{ workspace_name }}</h1>
-<form method="post" action="{{ url_for('invite_to_workspace', workspace_id=workspace_id) }}">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  <div class="form-field">
-    <label for="invitee_email">Email address</label>
-    <input type="email" id="invitee_email" name="invitee_email" required autofocus>
-  </div>
-  <p class="muted small">
-    If they already have a Snickr account we'll match them up. If not, they'll be matched the moment they sign up with this email.
-  </p>
-  <button type="submit">Send invitation</button>
-</form>
-<a class="back-link" href="{{ url_for('workspace', workspace_id=workspace_id) }}">&larr; Back to workspace</a>
+<div class="max-w-md mx-auto py-8 px-4">
+  <h1 class="text-2xl font-black mb-6">Invite someone to {{ workspace_name }}</h1>
+  <form method="post" action="{{ url_for('invite_to_workspace', workspace_id=workspace_id) }}" class="space-y-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div>
+      <label for="invitee_email" class="block text-sm font-semibold mb-1">Email address</label>
+      <input type="email" id="invitee_email" name="invitee_email" required autofocus
+             class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-slack-side/30 focus:border-slack-side">
+    </div>
+    <p class="text-sm text-gray-500">If they already have a Snickr account we'll match them up. If not, they'll be matched the moment they sign up with this email.</p>
+    <button type="submit" class="px-4 py-2 bg-slack-side text-white font-semibold rounded hover:bg-slack-top">Send invitation</button>
+  </form>
+  <a href="{{ url_for('workspace', workspace_id=workspace_id) }}" class="inline-block mt-6 text-sm text-gray-500 hover:underline">&larr; Back to workspace</a>
+</div>
 {% endblock %}

@@ -1,22 +1,33 @@
 {% extends "base.html" %}
 {% block title %}Snickr — Dashboard{% endblock %}
 {% block content %}
-<h1>Your workspaces</h1>
-<p><a href="{{ url_for('new_workspace') }}">+ New workspace</a></p>
-{% if workspaces %}
-  <ul class="card-list">
-    {% for ws in workspaces %}
-      <li class="card">
-        <a href="{{ url_for('workspace', workspace_id=ws.workspace_id) }}">
-          <strong>{{ ws.workspace_name }}</strong>
+<div class="max-w-3xl mx-auto py-8 px-4">
+  <h1 class="text-2xl font-black mb-2">Your workspaces</h1>
+  <p class="text-gray-500 mb-6">Pick a workspace to dive in, or create a new one.</p>
+
+  {% if workspaces %}
+    <div class="grid sm:grid-cols-2 gap-3">
+      {% for ws in workspaces %}
+        <a href="{{ url_for('workspace', workspace_id=ws.workspace_id) }}"
+           class="block p-4 bg-white border border-gray-200 rounded-lg hover:border-slack-side hover:shadow transition">
+          <div class="flex items-center gap-3 mb-2">
+            <span class="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold"
+                  style="background: {{ ws.workspace_name|avatar_color }}">{{ ws.workspace_name|initial }}</span>
+            <strong class="text-base">{{ ws.workspace_name }}</strong>
+          </div>
+          {% if ws.workspace_description %}
+            <p class="text-sm text-gray-600">{{ ws.workspace_description }}</p>
+          {% endif %}
         </a>
-        {% if ws.workspace_description %}
-          <p class="muted" style="margin:0.25rem 0 0">{{ ws.workspace_description }}</p>
-        {% endif %}
-      </li>
-    {% endfor %}
-  </ul>
-{% else %}
-  <div class="empty">You're not a member of any workspaces yet.</div>
-{% endif %}
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="text-center py-12 text-gray-500 border-2 border-dashed border-gray-200 rounded-lg">
+      You're not a member of any workspaces yet.
+    </div>
+  {% endif %}
+
+  <a href="{{ url_for('new_workspace') }}"
+     class="inline-block mt-6 px-4 py-2 bg-slack-side text-white font-semibold rounded hover:bg-slack-top">+ New workspace</a>
+</div>
 {% endblock %}
