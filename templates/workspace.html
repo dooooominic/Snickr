@@ -19,8 +19,14 @@
   <ul class="card-list">
     {% for ch in channels %}
       <li class="card">
-        <a href="{{ url_for('channel', channel_id=ch.channel_id) }}"># {{ ch.channel_name }}</a>
+        <a href="{{ url_for('channel', channel_id=ch.channel_id) }}"
+           class="{% if ch.unread_count %}channel-unread{% endif %}">
+          # {{ ch.channel_name }}
+        </a>
         <span class="channel-type">({{ ch.channel_type }})</span>
+        {% if ch.unread_count %}
+          <span class="unread-badge">{{ ch.unread_count }}</span>
+        {% endif %}
       </li>
     {% endfor %}
   </ul>

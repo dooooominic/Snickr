@@ -341,13 +341,27 @@ def workspace(workspace_id):
     )
     channels = db.query(
         """
-        SELECT c.channel_id, c.channel_name, c.channel_type
+        SELECT
+            c.channel_id,
+            c.channel_name,
+            c.channel_type,
+            (
+                SELECT COUNT(*) FROM messages m
+                WHERE m.channel_id = c.channel_id
+                  AND m.user_id <> %s
+                  AND NOT EXISTS (
+                      SELECT 1 FROM is_seen s
+                      WHERE s.message_id = m.message_id
+                        AND s.user_id = %s
+                        AND s.is_seen = true
+                  )
+            ) AS unread_count
         FROM channels c
         JOIN channel_membership cm ON c.channel_id = cm.channel_id
         WHERE c.workspace_id = %s AND cm.user_id = %s
         ORDER BY c.channel_name
         """,
-        (workspace_id, user["id"]),
+        (user["id"], user["id"], workspace_id, user["id"]),
     )
     return render_template(
         "workspace.html",
@@ -389,6 +403,20 @@ def channel(channel_id):
         """,
         (channel_id,),
     )
+
+    db.execute(
+        """
+        INSERT INTO is_seen (message_id, user_id, is_seen, seen_time)
+        SELECT m.message_id, %s, true, now()
+        FROM messages m
+        WHERE m.channel_id = %s
+        ON CONFLICT (message_id, user_id) DO UPDATE
+            SET is_seen = true, seen_time = now()
+            WHERE is_seen.is_seen = false
+        """,
+        (user["id"], channel_id),
+    )
+
     return render_template(
         "channel.html",
         user=user,
