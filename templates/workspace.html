@@ -7,12 +7,22 @@
     <p class="text-gray-600 mb-4">{{ active_workspace.workspace_description }}</p>
   {% endif %}
 
-  <div class="flex gap-3 text-sm mb-8">
+  <div class="flex gap-3 text-sm mb-8 flex-wrap items-center">
     <a href="{{ url_for('workspace_members', workspace_id=workspace_id) }}" class="text-slack-active hover:underline">View members</a>
+    <span class="text-gray-300">·</span>
+    <a href="{{ url_for('browse_channels', workspace_id=workspace_id) }}" class="text-slack-active hover:underline">Browse channels</a>
     {% if is_admin %}
       <span class="text-gray-300">·</span>
       <a href="{{ url_for('invite_to_workspace', workspace_id=workspace_id) }}" class="text-slack-active hover:underline">+ Invite people</a>
+      <span class="text-gray-300">·</span>
+      <a href="{{ url_for('edit_workspace', workspace_id=workspace_id) }}" class="text-slack-active hover:underline">Edit workspace</a>
     {% endif %}
+    <span class="text-gray-300">·</span>
+    <form method="post" action="{{ url_for('leave_workspace', workspace_id=workspace_id) }}"
+          onsubmit="return confirm('Leave this workspace? You will lose access to all its channels.')">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="text-red-500 hover:underline text-sm">Leave workspace</button>
+    </form>
   </div>
 
   <div class="grid md:grid-cols-2 gap-6">

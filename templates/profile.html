@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Snickr — Profile{% endblock %}
+{% block content %}
+<div class="max-w-lg mx-auto px-6 py-8">
+  <h1 class="text-2xl font-black mb-6">Your profile</h1>
+
+  <form method="post" action="{{ url_for('profile') }}" class="space-y-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div>
+      <label class="block text-sm font-semibold text-gray-700 mb-1">Username</label>
+      <input type="text" value="{{ user_data.username }}" disabled
+             class="w-full px-3 py-2 border border-gray-200 rounded bg-gray-50 text-gray-500 text-sm">
+      <p class="text-xs text-gray-400 mt-1">Username cannot be changed.</p>
+    </div>
+
+    <div>
+      <label class="block text-sm font-semibold text-gray-700 mb-1">Display name</label>
+      <input type="text" name="nickname" value="{{ user_data.nickname or '' }}"
+             placeholder="Your display name"
+             class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-slack-side/30 focus:border-slack-side text-sm">
+    </div>
+
+    <div>
+      <label class="block text-sm font-semibold text-gray-700 mb-1">Email</label>
+      <input type="email" name="email" value="{{ user_data.user_email }}" required
+             class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-slack-side/30 focus:border-slack-side text-sm">
+    </div>
+
+    <hr class="border-gray-200 my-2">
+    <p class="text-sm font-semibold text-gray-700">Change password <span class="font-normal text-gray-400">(optional — leave blank to keep current)</span></p>
+
+    <div>
+      <label class="block text-sm font-semibold text-gray-700 mb-1">Current password</label>
+      <input type="password" name="current_password"
+             class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-slack-side/30 focus:border-slack-side text-sm">
+    </div>
+
+    <div>
+      <label class="block text-sm font-semibold text-gray-700 mb-1">New password</label>
+      <input type="password" name="new_password" minlength="6"
+             class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-slack-side/30 focus:border-slack-side text-sm">
+      <p class="text-xs text-gray-400 mt-1">Minimum 6 characters.</p>
+    </div>
+
+    <button type="submit"
+            class="w-full py-2.5 bg-slack-side text-white font-semibold rounded hover:bg-slack-top text-sm">
+      Save changes
+    </button>
+  </form>
+</div>
+{% endblock %}

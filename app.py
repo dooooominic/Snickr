@@ -860,6 +860,12 @@ def workspace_members(workspace_id):
         (workspace_id,),
     )
 
+    admin_count_rows = db.query(
+        "SELECT COUNT(*) AS n FROM workspace_membership WHERE workspace_id = %s AND is_admin = true",
+        (workspace_id,),
+    )
+    admin_count = admin_count_rows[0]["n"] if admin_count_rows else 0
+
     stale_invites = []
     if is_admin:
         stale_invites = db.query(
@@ -899,6 +905,7 @@ def workspace_members(workspace_id):
         members=members,
         stale_invites=stale_invites,
         current_user_id=user["id"],
+        admin_count=admin_count,
         **ctx,
     )
 
@@ -918,6 +925,282 @@ def promote_member(workspace_id, member_id):
 
     flash("Member promoted to admin." if rowcount else "Member not found or already an admin.")
     return redirect(url_for("workspace_members", workspace_id=workspace_id))
+
+
+@app.route("/workspace/<workspace_id>/members/<member_id>/demote", methods=["POST"])
+@login_required
+@admin_required
+def demote_member(workspace_id, member_id):
+    admin_count_rows = db.query(
+        "SELECT COUNT(*) AS n FROM workspace_membership WHERE workspace_id = %s AND is_admin = true",
+        (workspace_id,),
+    )
+    n_admins = admin_count_rows[0]["n"] if admin_count_rows else 0
+    if n_admins <= 1:
+        flash("Can't demote: the workspace must have at least one admin.")
+        return redirect(url_for("workspace_members", workspace_id=workspace_id))
+
+    rowcount = db.execute(
+        """
+        UPDATE workspace_membership
+        SET is_admin = false
+        WHERE workspace_id = %s AND user_id = %s AND is_admin = true
+        """,
+        (workspace_id, member_id),
+    )
+    flash("Admin demoted to member." if rowcount else "Member not found or not an admin.")
+    return redirect(url_for("workspace_members", workspace_id=workspace_id))
+
+
+@app.route("/workspace/<workspace_id>/members/<member_id>/remove", methods=["POST"])
+@login_required
+@admin_required
+def remove_member(workspace_id, member_id):
+    user = current_user()
+    if member_id == user["id"]:
+        flash("You can't remove yourself. Use 'Leave workspace' instead.")
+        return redirect(url_for("workspace_members", workspace_id=workspace_id))
+
+    with db.transaction() as cur:
+        cur.execute(
+            """
+            DELETE FROM channel_membership
+            WHERE user_id = %s
+              AND channel_id IN (SELECT channel_id FROM channels WHERE workspace_id = %s)
+            """,
+            (member_id, workspace_id),
+        )
+        cur.execute(
+            "DELETE FROM workspace_membership WHERE workspace_id = %s AND user_id = %s",
+            (workspace_id, member_id),
+        )
+
+    flash("Member removed.")
+    return redirect(url_for("workspace_members", workspace_id=workspace_id))
+
+
+@app.route("/workspace/<workspace_id>/channels")
+@login_required
+def browse_channels(workspace_id):
+    user = current_user()
+    membership = db.query(
+        "SELECT 1 FROM workspace_membership WHERE workspace_id = %s AND user_id = %s",
+        (workspace_id, user["id"]),
+    )
+    if not membership:
+        flash("You don't have access to that workspace.")
+        return redirect(url_for("dashboard"))
+
+    channels = db.query(
+        """
+        SELECT c.channel_id, c.channel_name,
+               COUNT(cm2.user_id) AS member_count,
+               EXISTS(
+                   SELECT 1 FROM channel_membership cm
+                   WHERE cm.channel_id = c.channel_id AND cm.user_id = %s
+               ) AS is_member
+        FROM channels c
+        LEFT JOIN channel_membership cm2 ON cm2.channel_id = c.channel_id
+        WHERE c.workspace_id = %s AND c.channel_type = 'public'
+        GROUP BY c.channel_id, c.channel_name
+        ORDER BY c.channel_name
+        """,
+        (user["id"], workspace_id),
+    )
+    ctx = _workspace_context(workspace_id, user["id"]) or {}
+    return render_template("channels_browse.html", workspace_id=workspace_id, channels=channels, **ctx)
+
+
+@app.route("/workspace/<workspace_id>/channels/<channel_id>/join", methods=["POST"])
+@login_required
+def join_channel(workspace_id, channel_id):
+    user = current_user()
+    wm = db.query(
+        "SELECT 1 FROM workspace_membership WHERE workspace_id = %s AND user_id = %s",
+        (workspace_id, user["id"]),
+    )
+    if not wm:
+        flash("You don't have access to that workspace.")
+        return redirect(url_for("dashboard"))
+
+    ch = db.query(
+        "SELECT channel_type FROM channels WHERE channel_id = %s AND workspace_id = %s",
+        (channel_id, workspace_id),
+    )
+    if not ch or ch[0]["channel_type"] != "public":
+        flash("Channel not found.")
+        return redirect(url_for("browse_channels", workspace_id=workspace_id))
+
+    db.execute(
+        "INSERT INTO channel_membership (channel_id, user_id) VALUES (%s, %s) ON CONFLICT DO NOTHING",
+        (channel_id, user["id"]),
+    )
+    return redirect(url_for("channel", channel_id=channel_id))
+
+
+@app.route("/channel/<channel_id>/leave", methods=["POST"])
+@login_required
+def leave_channel(channel_id):
+    user = current_user()
+    ch = db.query(
+        "SELECT channel_type, workspace_id, channel_name FROM channels WHERE channel_id = %s",
+        (channel_id,),
+    )
+    if not ch:
+        flash("Channel not found.")
+        return redirect(url_for("dashboard"))
+
+    if ch[0]["channel_type"] == "direct":
+        flash("You can't leave a direct message channel.")
+        return redirect(url_for("channel", channel_id=channel_id))
+
+    workspace_id = str(ch[0]["workspace_id"])
+    db.execute(
+        "DELETE FROM channel_membership WHERE channel_id = %s AND user_id = %s",
+        (channel_id, user["id"]),
+    )
+    flash(f"You left #{ch[0]['channel_name']}.")
+    return redirect(url_for("workspace", workspace_id=workspace_id))
+
+
+@app.route("/workspace/<workspace_id>/leave", methods=["POST"])
+@login_required
+def leave_workspace(workspace_id):
+    user = current_user()
+    me = db.query(
+        "SELECT is_admin FROM workspace_membership WHERE workspace_id = %s AND user_id = %s",
+        (workspace_id, user["id"]),
+    )
+    if not me:
+        flash("You're not a member of that workspace.")
+        return redirect(url_for("dashboard"))
+
+    if me[0]["is_admin"]:
+        other_admins = db.query(
+            "SELECT 1 FROM workspace_membership WHERE workspace_id = %s AND user_id != %s AND is_admin = true",
+            (workspace_id, user["id"]),
+        )
+        other_members = db.query(
+            "SELECT 1 FROM workspace_membership WHERE workspace_id = %s AND user_id != %s",
+            (workspace_id, user["id"]),
+        )
+        if not other_admins and other_members:
+            flash("You're the only admin. Promote someone else to admin before leaving.")
+            return redirect(url_for("workspace", workspace_id=workspace_id))
+
+    with db.transaction() as cur:
+        cur.execute(
+            """
+            DELETE FROM channel_membership
+            WHERE user_id = %s
+              AND channel_id IN (SELECT channel_id FROM channels WHERE workspace_id = %s)
+            """,
+            (user["id"], workspace_id),
+        )
+        cur.execute(
+            "DELETE FROM workspace_membership WHERE workspace_id = %s AND user_id = %s",
+            (workspace_id, user["id"]),
+        )
+
+    flash("You left the workspace.")
+    return redirect(url_for("dashboard"))
+
+
+@app.route("/workspace/<workspace_id>/edit", methods=["GET", "POST"])
+@login_required
+@admin_required
+def edit_workspace(workspace_id):
+    user = current_user()
+    ws = db.query(
+        "SELECT workspace_name, workspace_description FROM workspaces WHERE workspace_id = %s",
+        (workspace_id,),
+    )
+    if not ws:
+        flash("Workspace not found.")
+        return redirect(url_for("dashboard"))
+
+    if request.method == "POST":
+        name = request.form.get("workspace_name", "").strip()
+        description = request.form.get("workspace_description", "").strip() or None
+
+        if not name:
+            flash("Workspace name is required.")
+            return render_template("workspace_edit.html", workspace_id=workspace_id, ws=ws[0], **(_workspace_context(workspace_id, user["id"]) or {}))
+
+        db.execute(
+            "UPDATE workspaces SET workspace_name = %s, workspace_description = %s WHERE workspace_id = %s",
+            (name, description, workspace_id),
+        )
+        flash("Workspace updated.")
+        return redirect(url_for("workspace", workspace_id=workspace_id))
+
+    return render_template("workspace_edit.html", workspace_id=workspace_id, ws=ws[0], **(_workspace_context(workspace_id, user["id"]) or {}))
+
+
+@app.route("/profile", methods=["GET", "POST"])
+@login_required
+def profile():
+    user = current_user()
+    row = db.query(
+        "SELECT user_id, username, user_email, nickname FROM users WHERE user_id = %s",
+        (user["id"],),
+    )
+    if not row:
+        flash("User not found.")
+        return redirect(url_for("dashboard"))
+
+    user_data = row[0]
+
+    if request.method == "POST":
+        nickname = request.form.get("nickname", "").strip() or None
+        email = request.form.get("email", "").strip()
+        current_password = request.form.get("current_password", "")
+        new_password = request.form.get("new_password", "")
+
+        if "@" not in email or "." not in email:
+            flash("Please enter a valid email address.")
+            return render_template("profile.html", user_data=user_data)
+
+        if new_password:
+            if not current_password:
+                flash("Enter your current password to set a new one.")
+                return render_template("profile.html", user_data=user_data)
+            if len(new_password) < 6:
+                flash("New password must be at least 6 characters.")
+                return render_template("profile.html", user_data=user_data)
+            check = db.query(
+                "SELECT 1 FROM users WHERE user_id = %s AND password_hash = crypt(%s, password_hash)",
+                (user["id"], current_password),
+            )
+            if not check:
+                flash("Current password is incorrect.")
+                return render_template("profile.html", user_data=user_data)
+
+        try:
+            with db.transaction() as cur:
+                if new_password:
+                    cur.execute(
+                        """
+                        UPDATE users SET nickname = %s, user_email = %s,
+                            password_hash = crypt(%s, gen_salt('bf'))
+                        WHERE user_id = %s
+                        """,
+                        (nickname, email, new_password, user["id"]),
+                    )
+                else:
+                    cur.execute(
+                        "UPDATE users SET nickname = %s, user_email = %s WHERE user_id = %s",
+                        (nickname, email, user["id"]),
+                    )
+        except psycopg2.errors.UniqueViolation:
+            flash("That email is already taken.")
+            return render_template("profile.html", user_data=user_data)
+
+        session["user"] = {**session["user"], "email": email}
+        flash("Profile updated.")
+        return redirect(url_for("profile"))
+
+    return render_template("profile.html", user_data=user_data)
 
 
 @app.route("/search")

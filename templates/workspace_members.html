@@ -37,12 +37,24 @@
             <td class="px-4 py-3 text-gray-500">{{ m.joined_time.strftime('%b %d, %Y') }}</td>
             {% if is_admin %}
               <td class="px-4 py-3 text-right">
-                {% if not m.is_admin and m.user_id|string != current_user_id %}
-                  <form method="post" action="{{ url_for('promote_member', workspace_id=workspace_id, member_id=m.user_id) }}">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="px-2 py-1 text-xs bg-slack-side text-white rounded hover:bg-slack-top">Promote to admin</button>
-                  </form>
-                {% endif %}
+                <div class="flex items-center justify-end gap-2">
+                  {% if not m.is_admin and m.user_id|string != current_user_id %}
+                    <form method="post" action="{{ url_for('promote_member', workspace_id=workspace_id, member_id=m.user_id) }}">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit" class="px-2 py-1 text-xs bg-slack-side text-white rounded hover:bg-slack-top">Promote</button>
+                    </form>
+                    <form method="post" action="{{ url_for('remove_member', workspace_id=workspace_id, member_id=m.user_id) }}"
+                          onsubmit="return confirm('Remove {{ m.username }} from this workspace?')">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit" class="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600">Remove</button>
+                    </form>
+                  {% elif m.is_admin and m.user_id|string != current_user_id and admin_count > 1 %}
+                    <form method="post" action="{{ url_for('demote_member', workspace_id=workspace_id, member_id=m.user_id) }}">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit" class="px-2 py-1 text-xs border border-gray-300 text-gray-600 rounded hover:bg-gray-100">Demote</button>
+                    </form>
+                  {% endif %}
+                </div>
               </td>
             {% endif %}
           </tr>

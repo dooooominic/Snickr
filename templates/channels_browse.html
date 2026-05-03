@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Snickr — Browse channels{% endblock %}
+{% block content %}
+<div class="px-8 py-6">
+  <h1 class="text-2xl font-black mb-6">Browse channels</h1>
+
+  {% if channels %}
+    <div class="space-y-2">
+      {% for ch in channels %}
+        <div class="flex items-center justify-between px-4 py-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
+          <div>
+            <div class="font-semibold text-sm"># {{ ch.channel_name }}</div>
+            <div class="text-xs text-gray-500">{{ ch.member_count }} member{{ 's' if ch.member_count != 1 }}</div>
+          </div>
+          {% if ch.is_member %}
+            <a href="{{ url_for('channel', channel_id=ch.channel_id) }}"
+               class="px-3 py-1.5 text-sm text-slack-active hover:underline">View</a>
+          {% else %}
+            <form method="post" action="{{ url_for('join_channel', workspace_id=workspace_id, channel_id=ch.channel_id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit"
+                      class="px-3 py-1.5 text-sm bg-slack-side text-white rounded hover:bg-slack-top">Join</button>
+            </form>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="text-center py-12 text-gray-500 border-2 border-dashed border-gray-200 rounded-lg">
+      <p class="text-base mb-3">No public channels yet.</p>
+      <a href="{{ url_for('new_channel', workspace_id=workspace_id) }}"
+         class="inline-block px-4 py-2 bg-slack-side text-white text-sm font-semibold rounded hover:bg-slack-top">
+        Create the first channel
+      </a>
+    </div>
+  {% endif %}
+
+  <a href="{{ url_for('workspace', workspace_id=workspace_id) }}"
+     class="inline-block mt-6 text-sm text-gray-500 hover:underline">&larr; Back to workspace</a>
+</div>
+{% endblock %}

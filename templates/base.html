@@ -42,6 +42,7 @@
         Invitations{% if pending_invitation_count %} <span class="ml-1 inline-flex items-center justify-center bg-slack-accent text-white text-[11px] font-bold rounded-full w-5 h-5">{{ pending_invitation_count }}</span>{% endif %}
       </a>
       <span class="text-sm opacity-80">{{ session.user.username }}</span>
+      <a href="{{ url_for('profile') }}" class="text-sm hover:underline">Profile</a>
       <a href="{{ url_for('logout') }}" class="text-sm hover:underline">Log out</a>
     {% else %}
       <span class="flex-1"></span>
@@ -95,6 +96,8 @@
           {% endfor %}
           <a href="{{ url_for('new_channel', workspace_id=active_workspace.workspace_id) }}"
              class="block px-2 py-1 rounded text-sm text-white/70 hover:bg-white/10 mt-1">+ Add channel</a>
+          <a href="{{ url_for('browse_channels', workspace_id=active_workspace.workspace_id) }}"
+             class="block px-2 py-1 rounded text-sm text-white/70 hover:bg-white/10">Browse channels</a>
 
           <div class="text-xs uppercase tracking-wider text-white/60 px-2 mt-4 mb-1">Direct messages</div>
           {% for ch in workspace_channels if ch.channel_type == 'direct' %}

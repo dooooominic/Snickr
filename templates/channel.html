@@ -11,10 +11,17 @@
       </h1>
       <p class="text-xs text-gray-500">{{ channel.channel_type }} channel</p>
     </div>
-    {% if channel.channel_type != 'direct' %}
-      <a href="{{ url_for('invite_to_channel', channel_id=channel_id) }}"
-         class="text-sm text-slack-active hover:underline">+ Invite to channel</a>
-    {% endif %}
+    <div class="flex items-center gap-4">
+      {% if channel.channel_type != 'direct' %}
+        <a href="{{ url_for('invite_to_channel', channel_id=channel_id) }}"
+           class="text-sm text-slack-active hover:underline">+ Invite to channel</a>
+        <form method="post" action="{{ url_for('leave_channel', channel_id=channel_id) }}"
+              onsubmit="return confirm('Leave #{{ channel.channel_name }}?')">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="text-sm text-red-400 hover:underline">Leave channel</button>
+        </form>
+      {% endif %}
+    </div>
   </div>
 
   <!-- Messages -->
