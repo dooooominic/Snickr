@@ -21,6 +21,7 @@
 </div>
 
 <form method="post" action="{{ url_for('post_message', channel_id=channel_id) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <div style="display:flex;gap:0.5rem">
     <input type="text" name="message_text" placeholder="Message #{{ channel.channel_name }}"
            required style="flex:1;padding:0.5rem;border:1px solid #ccc;border-radius:4px">

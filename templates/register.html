@@ -3,6 +3,7 @@
 {% block content %}
 <h1>Create an account</h1>
 <form method="post" action="{{ url_for('register') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <div style="margin-bottom:0.75rem">
     <label for="email">Email</label><br>
     <input type="email" id="email" name="email" required autofocus style="width:100%;max-width:320px;padding:0.4rem">

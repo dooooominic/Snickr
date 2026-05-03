@@ -31,6 +31,7 @@
           <td style="padding:0.6rem 1rem;text-align:right">
             {% if not m.is_admin and m.user_id|string != current_user_id %}
               <form method="post" action="{{ url_for('promote_member', workspace_id=workspace_id, member_id=m.user_id) }}" style="margin:0">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" style="padding:0.3rem 0.7rem;font-size:0.85rem">Promote to admin</button>
               </form>
             {% endif %}

@@ -3,6 +3,7 @@
 {% block content %}
 <h1>Create a workspace</h1>
 <form method="post" action="{{ url_for('new_workspace') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <div style="margin-bottom:0.75rem">
     <label for="workspace_name">Workspace name</label><br>
     <input type="text" id="workspace_name" name="workspace_name" required autofocus

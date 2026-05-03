@@ -1,16 +1,23 @@
 import os
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+import secrets
+from functools import wraps
+from flask import Flask, render_template, request, redirect, url_for, session, flash, abort
 from dotenv import load_dotenv
 import psycopg2
 import db
 
 load_dotenv()
 
+SECRET_KEY = os.environ.get("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY environment variable is required")
+
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "dev-only-insecure-key")
+app.secret_key = SECRET_KEY
 
 # Jinja2 auto-escapes all template output by default, guarding against XSS.
 # All DB calls in db.py use %s parameterized queries, guarding against SQL injection.
+# Every POST form carries a CSRF token validated by the before_request hook below.
 
 
 # ---------------------------------------------------------------------------
@@ -25,13 +32,54 @@ def current_user():
     return user
 
 def login_required(f):
-    from functools import wraps
     @wraps(f)
     def wrapper(*args, **kwargs):
         if not current_user():
             return redirect(url_for("login"))
         return f(*args, **kwargs)
     return wrapper
+
+def admin_required(f):
+    @wraps(f)
+    def wrapper(workspace_id, *args, **kwargs):
+        user = current_user()
+        if not user:
+            return redirect(url_for("login"))
+        rows = db.query(
+            "SELECT 1 FROM workspace_membership WHERE workspace_id=%s AND user_id=%s AND is_admin=true",
+            (workspace_id, user["id"]),
+        )
+        if not rows:
+            flash("Only workspace admins can do that.")
+            return redirect(url_for("workspace", workspace_id=workspace_id))
+        return f(workspace_id, *args, **kwargs)
+    return wrapper
+
+
+# ---------------------------------------------------------------------------
+# CSRF protection
+# ---------------------------------------------------------------------------
+
+def csrf_token():
+    if "csrf_token" not in session:
+        session["csrf_token"] = secrets.token_hex(32)
+    return session["csrf_token"]
+
+
+@app.before_request
+def csrf_protect():
+    if "csrf_token" not in session:
+        session["csrf_token"] = secrets.token_hex(32)
+    if request.method == "POST":
+        sent = request.form.get("csrf_token", "")
+        expected = session["csrf_token"]
+        if not secrets.compare_digest(sent, expected):
+            abort(403)
+
+
+@app.context_processor
+def inject_csrf_token():
+    return {"csrf_token": csrf_token}
 
 
 # ---------------------------------------------------------------------------
@@ -356,16 +404,9 @@ def post_message(channel_id):
 
 @app.route("/workspace/<workspace_id>/invite", methods=["GET", "POST"])
 @login_required
+@admin_required
 def invite_to_workspace(workspace_id):
     user = current_user()
-
-    is_admin = db.query(
-        "SELECT 1 FROM workspace_membership WHERE workspace_id = %s AND user_id = %s AND is_admin = true",
-        (workspace_id, user["id"]),
-    )
-    if not is_admin:
-        flash("Only workspace admins can send invitations.")
-        return redirect(url_for("workspace", workspace_id=workspace_id))
 
     ws_rows = db.query(
         "SELECT workspace_name FROM workspaces WHERE workspace_id = %s",
@@ -717,17 +758,8 @@ def workspace_members(workspace_id):
 
 @app.route("/workspace/<workspace_id>/members/<member_id>/promote", methods=["POST"])
 @login_required
+@admin_required
 def promote_member(workspace_id, member_id):
-    user = current_user()
-
-    is_admin = db.query(
-        "SELECT 1 FROM workspace_membership WHERE workspace_id = %s AND user_id = %s AND is_admin = true",
-        (workspace_id, user["id"]),
-    )
-    if not is_admin:
-        flash("Only workspace admins can promote members.")
-        return redirect(url_for("workspace_members", workspace_id=workspace_id))
-
     rowcount = db.execute(
         """
         UPDATE workspace_membership

@@ -3,6 +3,7 @@
 {% block content %}
 <h1>Invite someone to {{ workspace_name }}</h1>
 <form method="post" action="{{ url_for('invite_to_workspace', workspace_id=workspace_id) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <div style="margin-bottom:0.75rem">
     <label for="invitee_email">Email address</label><br>
     <input type="email" id="invitee_email" name="invitee_email" required autofocus

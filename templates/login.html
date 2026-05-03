@@ -3,6 +3,7 @@
 {% block content %}
 <h1>Log in</h1>
 <form method="post" action="{{ url_for('login') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <div style="margin-bottom:0.75rem">
     <label for="username">Username</label><br>
     <input type="text" id="username" name="username" required autofocus style="width:100%;max-width:320px;padding:0.4rem">

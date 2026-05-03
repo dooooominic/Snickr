@@ -3,6 +3,7 @@
 {% block content %}
 <h1>Create a channel</h1>
 <form method="post" action="{{ url_for('new_channel', workspace_id=workspace_id) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <div style="margin-bottom:0.75rem">
     <label for="channel_name">Channel name</label><br>
     <input type="text" id="channel_name" name="channel_name" required autofocus

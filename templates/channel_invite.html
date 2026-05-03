@@ -3,6 +3,7 @@
 {% block content %}
 <h1>Invite to # {{ channel.channel_name }}</h1>
 <form method="post" action="{{ url_for('invite_to_channel', channel_id=channel_id) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <div style="margin-bottom:0.75rem">
     <label for="invitee_username">Username</label><br>
     <input type="text" id="invitee_username" name="invitee_username" required autofocus

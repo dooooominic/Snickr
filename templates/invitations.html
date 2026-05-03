@@ -17,9 +17,11 @@
         </p>
         <div style="display:flex;gap:0.5rem;margin-top:0.5rem">
           <form method="post" action="{{ url_for('respond_workspace_invitation', invitation_id=inv.invitation_id, action='accept') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit">Accept</button>
           </form>
           <form method="post" action="{{ url_for('respond_workspace_invitation', invitation_id=inv.invitation_id, action='decline') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" style="background:#888">Decline</button>
           </form>
         </div>
@@ -43,9 +45,11 @@
         </p>
         <div style="display:flex;gap:0.5rem;margin-top:0.5rem">
           <form method="post" action="{{ url_for('respond_channel_invitation', invitation_id=inv.invitation_id, action='accept') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit">Accept</button>
           </form>
           <form method="post" action="{{ url_for('respond_channel_invitation', invitation_id=inv.invitation_id, action='decline') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" style="background:#888">Decline</button>
           </form>
         </div>
