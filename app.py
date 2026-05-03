@@ -18,7 +18,11 @@ app.secret_key = os.environ.get("SECRET_KEY", "dev-only-insecure-key")
 # ---------------------------------------------------------------------------
 
 def current_user():
-    return session.get("user")
+    user = session.get("user")
+    if user and not {"id", "username", "email"}.issubset(user):
+        session.clear()
+        return None
+    return user
 
 def login_required(f):
     from functools import wraps
