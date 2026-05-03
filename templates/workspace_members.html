@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Snickr — {{ workspace_name }} members{% endblock %}
+{% block content %}
+<h1>{{ workspace_name }} — members</h1>
+
+<table style="width:100%;background:#fff;border-collapse:collapse;border-radius:6px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.1)">
+  <thead style="background:#f0f0f0">
+    <tr>
+      <th style="text-align:left;padding:0.6rem 1rem">User</th>
+      <th style="text-align:left;padding:0.6rem 1rem">Role</th>
+      <th style="text-align:left;padding:0.6rem 1rem">Joined</th>
+      {% if is_admin %}<th style="padding:0.6rem 1rem"></th>{% endif %}
+    </tr>
+  </thead>
+  <tbody>
+    {% for m in members %}
+      <tr style="border-top:1px solid #eee">
+        <td style="padding:0.6rem 1rem">
+          <strong>{{ m.username }}</strong>
+          {% if m.nickname %}<span style="color:#888">({{ m.nickname }})</span>{% endif %}
+        </td>
+        <td style="padding:0.6rem 1rem">
+          {% if m.is_admin %}
+            <span style="background:#4a154b;color:#fff;padding:0.15rem 0.5rem;border-radius:3px;font-size:0.8rem">Admin</span>
+          {% else %}
+            <span style="color:#888">Member</span>
+          {% endif %}
+        </td>
+        <td style="padding:0.6rem 1rem;color:#888">{{ m.joined_time.strftime('%Y-%m-%d') }}</td>
+        {% if is_admin %}
+          <td style="padding:0.6rem 1rem;text-align:right">
+            {% if not m.is_admin and m.user_id|string != current_user_id %}
+              <form method="post" action="{{ url_for('promote_member', workspace_id=workspace_id, member_id=m.user_id) }}" style="margin:0">
+                <button type="submit" style="padding:0.3rem 0.7rem;font-size:0.85rem">Promote to admin</button>
+              </form>
+            {% endif %}
+          </td>
+        {% endif %}
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if is_admin %}
+  <h2 style="margin-top:2rem">Stale public-channel invitations</h2>
+  <p style="color:#666;font-size:0.9rem">
+    Pending invitations to public channels that are over 5 days old and have not been joined.
+  </p>
+  {% if stale_invites %}
+    <table style="width:100%;background:#fff;border-collapse:collapse;border-radius:6px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.1)">
+      <thead style="background:#f0f0f0">
+        <tr>
+          <th style="text-align:left;padding:0.6rem 1rem">Channel</th>
+          <th style="text-align:left;padding:0.6rem 1rem">Invitee</th>
+          <th style="text-align:left;padding:0.6rem 1rem">Invited by</th>
+          <th style="text-align:left;padding:0.6rem 1rem">Sent</th>
+          <th style="text-align:left;padding:0.6rem 1rem">Days stale</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in stale_invites %}
+          <tr style="border-top:1px solid #eee">
+            <td style="padding:0.6rem 1rem">
+              <a href="{{ url_for('channel', channel_id=s.channel_id) }}"># {{ s.channel_name }}</a>
+            </td>
+            <td style="padding:0.6rem 1rem">
+              {{ s.invitee }}{% if s.invitee_nickname %} <span style="color:#888">({{ s.invitee_nickname }})</span>{% endif %}
+            </td>
+            <td style="padding:0.6rem 1rem">{{ s.invited_by }}</td>
+            <td style="padding:0.6rem 1rem;color:#888">{{ s.invitation_time.strftime('%Y-%m-%d') }}</td>
+            <td style="padding:0.6rem 1rem;color:#a33">{{ s.days_stale }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p style="color:#777">No stale public-channel invitations.</p>
+  {% endif %}
+{% endif %}
+
+<p style="margin-top:1.5rem"><a href="{{ url_for('workspace', workspace_id=workspace_id) }}">&larr; Back to workspace</a></p>
+{% endblock %}

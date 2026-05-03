@@ -641,6 +641,106 @@ def respond_channel_invitation(invitation_id, action):
     return redirect(url_for("invitations"))
 
 
+@app.route("/workspace/<workspace_id>/members")
+@login_required
+def workspace_members(workspace_id):
+    user = current_user()
+
+    me = db.query(
+        "SELECT is_admin FROM workspace_membership WHERE workspace_id = %s AND user_id = %s",
+        (workspace_id, user["id"]),
+    )
+    if not me:
+        flash("You don't have access to that workspace.")
+        return redirect(url_for("dashboard"))
+    is_admin = me[0]["is_admin"]
+
+    ws = db.query(
+        "SELECT workspace_name FROM workspaces WHERE workspace_id = %s",
+        (workspace_id,),
+    )
+    if not ws:
+        flash("Workspace not found.")
+        return redirect(url_for("dashboard"))
+
+    members = db.query(
+        """
+        SELECT u.user_id, u.username, u.nickname, wm.is_admin, wm.joined_time
+        FROM workspace_membership wm
+        JOIN users u ON wm.user_id = u.user_id
+        WHERE wm.workspace_id = %s
+        ORDER BY wm.is_admin DESC, u.username
+        """,
+        (workspace_id,),
+    )
+
+    stale_invites = []
+    if is_admin:
+        stale_invites = db.query(
+            """
+            SELECT
+                c.channel_id,
+                c.channel_name,
+                u.username AS invitee,
+                u.nickname AS invitee_nickname,
+                inv.username AS invited_by,
+                ci.invitation_time,
+                EXTRACT(DAY FROM now() - ci.invitation_time)::int AS days_stale
+            FROM channel_invitation ci
+            JOIN channels c ON c.channel_id = ci.channel_id
+            JOIN users u   ON u.user_id   = ci.invitee_user_id
+            JOIN users inv ON inv.user_id = ci.inviter_user_id
+            WHERE c.workspace_id = %s
+              AND c.channel_type = 'public'
+              AND ci.invite_status = 'pending'
+              AND ci.invitation_time < now() - INTERVAL '5 days'
+              AND NOT EXISTS (
+                  SELECT 1 FROM channel_membership cm
+                  WHERE cm.channel_id = ci.channel_id
+                    AND cm.user_id = ci.invitee_user_id
+              )
+            ORDER BY c.channel_name, ci.invitation_time
+            """,
+            (workspace_id,),
+        )
+
+    return render_template(
+        "workspace_members.html",
+        workspace_id=workspace_id,
+        workspace_name=ws[0]["workspace_name"],
+        is_admin=is_admin,
+        members=members,
+        stale_invites=stale_invites,
+        current_user_id=user["id"],
+    )
+
+
+@app.route("/workspace/<workspace_id>/members/<member_id>/promote", methods=["POST"])
+@login_required
+def promote_member(workspace_id, member_id):
+    user = current_user()
+
+    is_admin = db.query(
+        "SELECT 1 FROM workspace_membership WHERE workspace_id = %s AND user_id = %s AND is_admin = true",
+        (workspace_id, user["id"]),
+    )
+    if not is_admin:
+        flash("Only workspace admins can promote members.")
+        return redirect(url_for("workspace_members", workspace_id=workspace_id))
+
+    rowcount = db.execute(
+        """
+        UPDATE workspace_membership
+        SET is_admin = true
+        WHERE workspace_id = %s AND user_id = %s AND is_admin = false
+        """,
+        (workspace_id, member_id),
+    )
+
+    flash("Member promoted to admin." if rowcount else "Member not found or already an admin.")
+    return redirect(url_for("workspace_members", workspace_id=workspace_id))
+
+
 @app.route("/search")
 @login_required
 def search():
