@@ -22,6 +22,9 @@
   <a href="{{ url_for('index') }}">Snickr</a>
   <span class="spacer"></span>
   {% if session.user %}
+    <a href="{{ url_for('invitations') }}">
+      Invitations{% if pending_invitation_count %} ({{ pending_invitation_count }}){% endif %}
+    </a>
     <span>{{ session.user.username }}</span>
     <a href="{{ url_for('logout') }}">Log out</a>
   {% else %}

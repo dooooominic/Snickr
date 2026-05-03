@@ -6,6 +6,10 @@
   <p style="color:#555">{{ workspace.workspace_description }}</p>
 {% endif %}
 
+{% if is_admin %}
+  <p><a href="{{ url_for('invite_to_workspace', workspace_id=workspace_id) }}">+ Invite people</a></p>
+{% endif %}
+
 <h2>Channels</h2>
 <p><a href="{{ url_for('new_channel', workspace_id=workspace_id) }}">+ New channel</a></p>
 {% if channels %}

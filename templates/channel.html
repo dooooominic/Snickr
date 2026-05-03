@@ -2,6 +2,9 @@
 {% block title %}Snickr — #{{ channel.channel_name }}{% endblock %}
 {% block content %}
 <h1># {{ channel.channel_name }}</h1>
+{% if channel.channel_type != 'direct' %}
+  <p><a href="{{ url_for('invite_to_channel', channel_id=channel_id) }}">+ Invite to channel</a></p>
+{% endif %}
 
 <div style="background:#fff;border-radius:6px;padding:1rem;box-shadow:0 1px 3px rgba(0,0,0,.1);min-height:200px;margin-bottom:1rem">
   {% if messages %}

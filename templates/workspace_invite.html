@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Snickr — Invite to {{ workspace_name }}{% endblock %}
+{% block content %}
+<h1>Invite someone to {{ workspace_name }}</h1>
+<form method="post" action="{{ url_for('invite_to_workspace', workspace_id=workspace_id) }}">
+  <div style="margin-bottom:0.75rem">
+    <label for="invitee_email">Email address</label><br>
+    <input type="email" id="invitee_email" name="invitee_email" required autofocus
+           style="width:100%;max-width:360px;padding:0.4rem">
+  </div>
+  <p style="color:#666;font-size:0.9rem">
+    If they already have a Snickr account we'll match them up. If not, they'll be matched the moment they sign up with this email.
+  </p>
+  <button type="submit">Send invitation</button>
+</form>
+<p style="margin-top:1rem"><a href="{{ url_for('workspace', workspace_id=workspace_id) }}">&larr; Back to workspace</a></p>
+{% endblock %}

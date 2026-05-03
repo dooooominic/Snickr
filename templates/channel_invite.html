@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Snickr — Invite to #{{ channel.channel_name }}{% endblock %}
+{% block content %}
+<h1>Invite to # {{ channel.channel_name }}</h1>
+<form method="post" action="{{ url_for('invite_to_channel', channel_id=channel_id) }}">
+  <div style="margin-bottom:0.75rem">
+    <label for="invitee_username">Username</label><br>
+    <input type="text" id="invitee_username" name="invitee_username" required autofocus
+           style="width:100%;max-width:360px;padding:0.4rem">
+  </div>
+  <p style="color:#666;font-size:0.9rem">
+    The user must already be a member of this workspace.
+  </p>
+  <button type="submit">Send invitation</button>
+</form>
+<p style="margin-top:1rem"><a href="{{ url_for('channel', channel_id=channel_id) }}">&larr; Back to channel</a></p>
+{% endblock %}

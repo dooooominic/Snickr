@@ -47,12 +47,10 @@ def login():
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
 
-        # Parameterized query — no string concatenation, safe from SQL injection.
-        # pgcrypto's crypt() recomputes the hash from the supplied password using the
-        # salt embedded in the stored hash; the row matches only if the password is right.
+        # crypt() rehashes with the embedded salt; row matches only if the password is right.
         rows = db.query(
             """
-            SELECT user_id, username
+            SELECT user_id, username, user_email
             FROM users
             WHERE username = %s
               AND password_hash = crypt(%s, password_hash)
@@ -62,7 +60,11 @@ def login():
 
         if rows:
             user = rows[0]
-            session["user"] = {"id": str(user["user_id"]), "username": user["username"]}
+            session["user"] = {
+                "id": str(user["user_id"]),
+                "username": user["username"],
+                "email": user["user_email"],
+            }
             return redirect(url_for("dashboard"))
 
         flash("Invalid username or password.")
@@ -93,7 +95,7 @@ def register():
                     """
                     INSERT INTO users (user_email, username, nickname, password_hash)
                     VALUES (%s, %s, %s, crypt(%s, gen_salt('bf')))
-                    RETURNING user_id, username
+                    RETURNING user_id, username, user_email
                     """,
                     (email, username, nickname, password),
                 )
@@ -102,7 +104,11 @@ def register():
             flash("That email or username is already taken.")
             return render_template("register.html")
 
-        session["user"] = {"id": str(new_user["user_id"]), "username": new_user["username"]}
+        session["user"] = {
+            "id": str(new_user["user_id"]),
+            "username": new_user["username"],
+            "email": new_user["user_email"],
+        }
         return redirect(url_for("dashboard"))
 
     return render_template("register.html")
@@ -247,14 +253,14 @@ def dashboard():
 def workspace(workspace_id):
     user = current_user()
 
-    # Confirm membership before showing anything.
     membership = db.query(
-        "SELECT 1 FROM workspace_membership WHERE workspace_id = %s AND user_id = %s",
+        "SELECT is_admin FROM workspace_membership WHERE workspace_id = %s AND user_id = %s",
         (workspace_id, user["id"]),
     )
     if not membership:
         flash("You don't have access to that workspace.")
         return redirect(url_for("dashboard"))
+    is_admin = membership[0]["is_admin"]
 
     ws = db.query(
         "SELECT workspace_name, workspace_description FROM workspaces WHERE workspace_id = %s",
@@ -276,6 +282,7 @@ def workspace(workspace_id):
         workspace=ws[0] if ws else {},
         workspace_id=workspace_id,
         channels=channels,
+        is_admin=is_admin,
     )
 
 
@@ -341,6 +348,314 @@ def post_message(channel_id):
         (channel_id, user["id"], text),
     )
     return redirect(url_for("channel", channel_id=channel_id))
+
+
+@app.route("/workspace/<workspace_id>/invite", methods=["GET", "POST"])
+@login_required
+def invite_to_workspace(workspace_id):
+    user = current_user()
+
+    is_admin = db.query(
+        "SELECT 1 FROM workspace_membership WHERE workspace_id = %s AND user_id = %s AND is_admin = true",
+        (workspace_id, user["id"]),
+    )
+    if not is_admin:
+        flash("Only workspace admins can send invitations.")
+        return redirect(url_for("workspace", workspace_id=workspace_id))
+
+    ws_rows = db.query(
+        "SELECT workspace_name FROM workspaces WHERE workspace_id = %s",
+        (workspace_id,),
+    )
+    if not ws_rows:
+        flash("Workspace not found.")
+        return redirect(url_for("dashboard"))
+    workspace_name = ws_rows[0]["workspace_name"]
+
+    if request.method == "POST":
+        invitee_email = request.form.get("invitee_email", "").strip().lower()
+
+        if "@" not in invitee_email or "." not in invitee_email:
+            flash("Please enter a valid email address.")
+            return render_template("workspace_invite.html", workspace_id=workspace_id, workspace_name=workspace_name)
+
+        existing = db.query("SELECT user_id FROM users WHERE user_email = %s", (invitee_email,))
+        invitee_user_id = str(existing[0]["user_id"]) if existing else None
+
+        if invitee_user_id:
+            already = db.query(
+                "SELECT 1 FROM workspace_membership WHERE workspace_id = %s AND user_id = %s",
+                (workspace_id, invitee_user_id),
+            )
+            if already:
+                flash(f"{invitee_email} is already a member of this workspace.")
+                return render_template("workspace_invite.html", workspace_id=workspace_id, workspace_name=workspace_name)
+
+        try:
+            db.execute(
+                """
+                INSERT INTO workspace_invitation
+                    (workspace_id, inviter_user_id, invitee_email, invitee_user_id)
+                VALUES (%s, %s, %s, %s)
+                """,
+                (workspace_id, user["id"], invitee_email, invitee_user_id),
+            )
+        except psycopg2.errors.UniqueViolation:
+            flash(f"There's already a pending invitation for {invitee_email}.")
+            return render_template("workspace_invite.html", workspace_id=workspace_id, workspace_name=workspace_name)
+
+        flash(f"Invitation sent to {invitee_email}.")
+        return redirect(url_for("workspace", workspace_id=workspace_id))
+
+    return render_template("workspace_invite.html", workspace_id=workspace_id, workspace_name=workspace_name)
+
+
+@app.route("/channel/<channel_id>/invite", methods=["GET", "POST"])
+@login_required
+def invite_to_channel(channel_id):
+    user = current_user()
+
+    membership = db.query(
+        "SELECT 1 FROM channel_membership WHERE channel_id = %s AND user_id = %s",
+        (channel_id, user["id"]),
+    )
+    if not membership:
+        flash("You don't have access to that channel.")
+        return redirect(url_for("dashboard"))
+
+    ch_rows = db.query(
+        "SELECT channel_name, channel_type, workspace_id FROM channels WHERE channel_id = %s",
+        (channel_id,),
+    )
+    if not ch_rows:
+        flash("Channel not found.")
+        return redirect(url_for("dashboard"))
+    channel = ch_rows[0]
+
+    if channel["channel_type"] == "direct":
+        flash("Direct channels can't have additional members.")
+        return redirect(url_for("channel", channel_id=channel_id))
+
+    if request.method == "POST":
+        username = request.form.get("invitee_username", "").strip()
+        if not username:
+            flash("Username is required.")
+            return render_template("channel_invite.html", channel_id=channel_id, channel=channel)
+
+        rows = db.query(
+            """
+            SELECT u.user_id
+            FROM users u
+            JOIN workspace_membership wm ON wm.user_id = u.user_id
+            WHERE u.username = %s AND wm.workspace_id = %s
+            """,
+            (username, channel["workspace_id"]),
+        )
+        if not rows:
+            flash(f"User '{username}' isn't a member of this workspace.")
+            return render_template("channel_invite.html", channel_id=channel_id, channel=channel)
+        invitee_user_id = str(rows[0]["user_id"])
+
+        if invitee_user_id == user["id"]:
+            flash("You can't invite yourself.")
+            return render_template("channel_invite.html", channel_id=channel_id, channel=channel)
+
+        already = db.query(
+            "SELECT 1 FROM channel_membership WHERE channel_id = %s AND user_id = %s",
+            (channel_id, invitee_user_id),
+        )
+        if already:
+            flash(f"{username} is already in this channel.")
+            return render_template("channel_invite.html", channel_id=channel_id, channel=channel)
+
+        try:
+            db.execute(
+                """
+                INSERT INTO channel_invitation (channel_id, inviter_user_id, invitee_user_id)
+                VALUES (%s, %s, %s)
+                """,
+                (channel_id, user["id"], invitee_user_id),
+            )
+        except psycopg2.errors.UniqueViolation:
+            flash(f"{username} already has a pending invitation to this channel.")
+            return render_template("channel_invite.html", channel_id=channel_id, channel=channel)
+
+        flash(f"Invitation sent to {username}.")
+        return redirect(url_for("channel", channel_id=channel_id))
+
+    return render_template("channel_invite.html", channel_id=channel_id, channel=channel)
+
+
+@app.route("/invitations")
+@login_required
+def invitations():
+    user = current_user()
+    workspace_invites = db.query(
+        """
+        SELECT wi.invitation_id, wi.invitation_time,
+               w.workspace_id, w.workspace_name, w.workspace_description,
+               u.username AS inviter
+        FROM workspace_invitation wi
+        JOIN workspaces w ON wi.workspace_id = w.workspace_id
+        JOIN users u ON wi.inviter_user_id = u.user_id
+        WHERE wi.invite_status = 'pending'
+          AND (wi.invitee_user_id = %s OR wi.invitee_email = %s)
+        ORDER BY wi.invitation_time DESC
+        """,
+        (user["id"], user["email"]),
+    )
+    channel_invites = db.query(
+        """
+        SELECT ci.invitation_id, ci.invitation_time,
+               c.channel_id, c.channel_name, c.channel_type,
+               w.workspace_name, u.username AS inviter
+        FROM channel_invitation ci
+        JOIN channels c ON ci.channel_id = c.channel_id
+        JOIN workspaces w ON c.workspace_id = w.workspace_id
+        JOIN users u ON ci.inviter_user_id = u.user_id
+        WHERE ci.invite_status = 'pending' AND ci.invitee_user_id = %s
+        ORDER BY ci.invitation_time DESC
+        """,
+        (user["id"],),
+    )
+    return render_template(
+        "invitations.html",
+        workspace_invites=workspace_invites,
+        channel_invites=channel_invites,
+    )
+
+
+@app.route("/invitations/workspace/<invitation_id>/<action>", methods=["POST"])
+@login_required
+def respond_workspace_invitation(invitation_id, action):
+    if action not in ("accept", "decline"):
+        flash("Invalid action.")
+        return redirect(url_for("invitations"))
+
+    user = current_user()
+    rows = db.query(
+        """
+        SELECT workspace_id
+        FROM workspace_invitation
+        WHERE invitation_id = %s
+          AND invite_status = 'pending'
+          AND (invitee_user_id = %s OR invitee_email = %s)
+        """,
+        (invitation_id, user["id"], user["email"]),
+    )
+    if not rows:
+        flash("Invitation not found or already responded.")
+        return redirect(url_for("invitations"))
+
+    workspace_id = str(rows[0]["workspace_id"])
+    new_status = "accepted" if action == "accept" else "declined"
+
+    with db.transaction() as cur:
+        # Backfill invitee_user_id in case the invite was sent by email pre-signup.
+        cur.execute(
+            """
+            UPDATE workspace_invitation
+            SET invite_status = %s, responded_at = now(), invitee_user_id = %s
+            WHERE invitation_id = %s
+            """,
+            (new_status, user["id"], invitation_id),
+        )
+        if action == "accept":
+            cur.execute(
+                """
+                INSERT INTO workspace_membership (workspace_id, user_id)
+                VALUES (%s, %s)
+                ON CONFLICT (workspace_id, user_id) DO NOTHING
+                """,
+                (workspace_id, user["id"]),
+            )
+
+    flash(f"Invitation {new_status}.")
+    if action == "accept":
+        return redirect(url_for("workspace", workspace_id=workspace_id))
+    return redirect(url_for("invitations"))
+
+
+@app.route("/invitations/channel/<invitation_id>/<action>", methods=["POST"])
+@login_required
+def respond_channel_invitation(invitation_id, action):
+    if action not in ("accept", "decline"):
+        flash("Invalid action.")
+        return redirect(url_for("invitations"))
+
+    user = current_user()
+    rows = db.query(
+        """
+        SELECT ci.channel_id, c.workspace_id
+        FROM channel_invitation ci
+        JOIN channels c ON ci.channel_id = c.channel_id
+        WHERE ci.invitation_id = %s
+          AND ci.invite_status = 'pending'
+          AND ci.invitee_user_id = %s
+        """,
+        (invitation_id, user["id"]),
+    )
+    if not rows:
+        flash("Invitation not found or already responded.")
+        return redirect(url_for("invitations"))
+
+    channel_id = str(rows[0]["channel_id"])
+    workspace_id = str(rows[0]["workspace_id"])
+    new_status = "accepted" if action == "accept" else "declined"
+
+    if action == "accept":
+        in_ws = db.query(
+            "SELECT 1 FROM workspace_membership WHERE workspace_id = %s AND user_id = %s",
+            (workspace_id, user["id"]),
+        )
+        if not in_ws:
+            flash("You need to join the workspace before accepting this channel invite.")
+            return redirect(url_for("invitations"))
+
+    with db.transaction() as cur:
+        cur.execute(
+            """
+            UPDATE channel_invitation
+            SET invite_status = %s, responded_at = now()
+            WHERE invitation_id = %s
+            """,
+            (new_status, invitation_id),
+        )
+        if action == "accept":
+            cur.execute(
+                """
+                INSERT INTO channel_membership (channel_id, user_id)
+                VALUES (%s, %s)
+                ON CONFLICT (channel_id, user_id) DO NOTHING
+                """,
+                (channel_id, user["id"]),
+            )
+
+    flash(f"Invitation {new_status}.")
+    if action == "accept":
+        return redirect(url_for("channel", channel_id=channel_id))
+    return redirect(url_for("invitations"))
+
+
+@app.context_processor
+def inject_invitation_count():
+    user = current_user()
+    if not user:
+        return {"pending_invitation_count": 0}
+    rows = db.query(
+        """
+        SELECT
+          (SELECT count(*) FROM workspace_invitation
+           WHERE invite_status = 'pending'
+             AND (invitee_user_id = %s OR invitee_email = %s))
+          +
+          (SELECT count(*) FROM channel_invitation
+           WHERE invite_status = 'pending' AND invitee_user_id = %s)
+          AS n
+        """,
+        (user["id"], user["email"], user["id"]),
+    )
+    return {"pending_invitation_count": rows[0]["n"] if rows else 0}
 
 
 if __name__ == "__main__":

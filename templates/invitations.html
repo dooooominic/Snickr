@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Snickr — Invitations{% endblock %}
+{% block content %}
+<h1>Pending invitations</h1>
+
+<h2 style="margin-top:1.5rem">Workspaces</h2>
+{% if workspace_invites %}
+  <ul style="list-style:none;padding:0">
+    {% for inv in workspace_invites %}
+      <li style="background:#fff;border-radius:6px;padding:1rem;margin-bottom:0.75rem;box-shadow:0 1px 3px rgba(0,0,0,.1)">
+        <strong>{{ inv.workspace_name }}</strong>
+        {% if inv.workspace_description %}
+          <p style="margin:0.25rem 0;color:#555">{{ inv.workspace_description }}</p>
+        {% endif %}
+        <p style="margin:0.25rem 0;color:#888;font-size:0.9rem">
+          Invited by {{ inv.inviter }} on {{ inv.invitation_time.strftime('%Y-%m-%d') }}
+        </p>
+        <div style="display:flex;gap:0.5rem;margin-top:0.5rem">
+          <form method="post" action="{{ url_for('respond_workspace_invitation', invitation_id=inv.invitation_id, action='accept') }}">
+            <button type="submit">Accept</button>
+          </form>
+          <form method="post" action="{{ url_for('respond_workspace_invitation', invitation_id=inv.invitation_id, action='decline') }}">
+            <button type="submit" style="background:#888">Decline</button>
+          </form>
+        </div>
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p style="color:#777">No pending workspace invitations.</p>
+{% endif %}
+
+<h2 style="margin-top:1.5rem">Channels</h2>
+{% if channel_invites %}
+  <ul style="list-style:none;padding:0">
+    {% for inv in channel_invites %}
+      <li style="background:#fff;border-radius:6px;padding:1rem;margin-bottom:0.75rem;box-shadow:0 1px 3px rgba(0,0,0,.1)">
+        <strong># {{ inv.channel_name }}</strong>
+        <span style="color:#888;font-size:0.85rem">({{ inv.channel_type }})</span>
+        <p style="margin:0.25rem 0;color:#555">in {{ inv.workspace_name }}</p>
+        <p style="margin:0.25rem 0;color:#888;font-size:0.9rem">
+          Invited by {{ inv.inviter }} on {{ inv.invitation_time.strftime('%Y-%m-%d') }}
+        </p>
+        <div style="display:flex;gap:0.5rem;margin-top:0.5rem">
+          <form method="post" action="{{ url_for('respond_channel_invitation', invitation_id=inv.invitation_id, action='accept') }}">
+            <button type="submit">Accept</button>
+          </form>
+          <form method="post" action="{{ url_for('respond_channel_invitation', invitation_id=inv.invitation_id, action='decline') }}">
+            <button type="submit" style="background:#888">Decline</button>
+          </form>
+        </div>
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p style="color:#777">No pending channel invitations.</p>
+{% endif %}
+{% endblock %}
