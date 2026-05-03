@@ -4,23 +4,23 @@
 <h1>Create a channel</h1>
 <form method="post" action="{{ url_for('new_channel', workspace_id=workspace_id) }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  <div style="margin-bottom:0.75rem">
-    <label for="channel_name">Channel name</label><br>
-    <input type="text" id="channel_name" name="channel_name" required autofocus
-           style="width:100%;max-width:360px;padding:0.4rem">
+  <div class="form-field">
+    <label for="channel_name">Channel name</label>
+    <input type="text" id="channel_name" name="channel_name" required autofocus>
   </div>
-  <div style="margin-bottom:0.75rem">
-    <label>Type</label><br>
+  <div class="form-field">
+    <label>Type</label>
     <label style="font-weight:normal"><input type="radio" name="channel_type" value="public" checked> Public</label>
-    <label style="font-weight:normal;margin-left:1rem"><input type="radio" name="channel_type" value="private"> Private</label>
-    <label style="font-weight:normal;margin-left:1rem"><input type="radio" name="channel_type" value="direct"> Direct (DM)</label>
+    &nbsp;
+    <label style="font-weight:normal"><input type="radio" name="channel_type" value="private"> Private</label>
+    &nbsp;
+    <label style="font-weight:normal"><input type="radio" name="channel_type" value="direct"> Direct (DM)</label>
   </div>
-  <div style="margin-bottom:0.75rem">
-    <label for="other_username">Other user <span style="color:#888;font-weight:normal">(only for direct channels)</span></label><br>
-    <input type="text" id="other_username" name="other_username"
-           style="width:100%;max-width:360px;padding:0.4rem">
+  <div class="form-field">
+    <label for="other_username">Other user <span class="hint">(only for direct channels)</span></label>
+    <input type="text" id="other_username" name="other_username">
   </div>
   <button type="submit">Create channel</button>
 </form>
-<p style="margin-top:1rem"><a href="{{ url_for('workspace', workspace_id=workspace_id) }}">&larr; Back to workspace</a></p>
+<a class="back-link" href="{{ url_for('workspace', workspace_id=workspace_id) }}">&larr; Back to workspace</a>
 {% endblock %}

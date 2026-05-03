@@ -4,17 +4,15 @@
 <h1>Create a workspace</h1>
 <form method="post" action="{{ url_for('new_workspace') }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  <div style="margin-bottom:0.75rem">
-    <label for="workspace_name">Workspace name</label><br>
-    <input type="text" id="workspace_name" name="workspace_name" required autofocus
-           style="width:100%;max-width:360px;padding:0.4rem">
+  <div class="form-field">
+    <label for="workspace_name">Workspace name</label>
+    <input type="text" id="workspace_name" name="workspace_name" required autofocus>
   </div>
-  <div style="margin-bottom:0.75rem">
-    <label for="workspace_description">Description <span style="color:#888;font-weight:normal">(optional)</span></label><br>
-    <textarea id="workspace_description" name="workspace_description" rows="3"
-              style="width:100%;max-width:360px;padding:0.4rem"></textarea>
+  <div class="form-field">
+    <label for="workspace_description">Description <span class="hint">(optional)</span></label>
+    <textarea id="workspace_description" name="workspace_description" rows="3"></textarea>
   </div>
   <button type="submit">Create workspace</button>
 </form>
-<p style="margin-top:1rem"><a href="{{ url_for('dashboard') }}">&larr; Back to dashboard</a></p>
+<a class="back-link" href="{{ url_for('dashboard') }}">&larr; Back to dashboard</a>
 {% endblock %}

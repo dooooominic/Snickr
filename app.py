@@ -1,5 +1,6 @@
 import os
 import secrets
+from datetime import datetime
 from functools import wraps
 from flask import Flask, render_template, request, redirect, url_for, session, flash, abort
 from dotenv import load_dotenv
@@ -80,6 +81,26 @@ def csrf_protect():
 @app.context_processor
 def inject_csrf_token():
     return {"csrf_token": csrf_token}
+
+
+@app.template_filter("relative_time")
+def relative_time(dt):
+    if dt is None:
+        return ""
+    delta = datetime.now() - dt
+    secs = delta.total_seconds()
+    if secs < 60:
+        return "just now"
+    if secs < 3600:
+        m = int(secs // 60)
+        return f"{m}m ago"
+    if secs < 86400:
+        h = int(secs // 3600)
+        return f"{h}h ago"
+    if secs < 604800:
+        d = int(secs // 86400)
+        return f"{d}d ago"
+    return dt.strftime("%b %d, %Y")
 
 
 # ---------------------------------------------------------------------------

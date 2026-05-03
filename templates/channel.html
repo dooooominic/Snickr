@@ -6,30 +6,25 @@
   <p><a href="{{ url_for('invite_to_channel', channel_id=channel_id) }}">+ Invite to channel</a></p>
 {% endif %}
 
-<div style="background:#fff;border-radius:6px;padding:1rem;box-shadow:0 1px 3px rgba(0,0,0,.1);min-height:200px;margin-bottom:1rem">
+<div class="messages">
   {% if messages %}
     {% for msg in messages %}
-      <div style="margin-bottom:0.75rem">
-        <strong>{{ msg.username }}</strong>
-        <span style="color:#888;font-size:0.8rem;margin-left:0.5rem">{{ msg.message_time.strftime('%Y-%m-%d %H:%M') }}</span>
-        <p style="margin:0.2rem 0 0">{{ msg.message_text }}</p>
+      <div class="message">
+        <span class="message-author">{{ msg.username }}</span>
+        <span class="message-time">{{ msg.message_time|relative_time }}</span>
+        <p class="message-text">{{ msg.message_text }}</p>
       </div>
     {% endfor %}
   {% else %}
-    <p style="color:#888">No messages yet. Be the first!</p>
+    <p class="muted" style="text-align:center;margin:1.5rem 0">No messages yet. Be the first.</p>
   {% endif %}
 </div>
 
-<form method="post" action="{{ url_for('post_message', channel_id=channel_id) }}">
+<form class="message-form" method="post" action="{{ url_for('post_message', channel_id=channel_id) }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  <div style="display:flex;gap:0.5rem">
-    <input type="text" name="message_text" placeholder="Message #{{ channel.channel_name }}"
-           required style="flex:1;padding:0.5rem;border:1px solid #ccc;border-radius:4px">
-    <button type="submit">Send</button>
-  </div>
+  <input type="text" name="message_text" placeholder="Message #{{ channel.channel_name }}" required>
+  <button type="submit">Send</button>
 </form>
 
-<p style="margin-top:1rem">
-  <a href="{{ url_for('workspace', workspace_id=channel.workspace_id) }}">&larr; Back to workspace</a>
-</p>
+<a class="back-link" href="{{ url_for('workspace', workspace_id=channel.workspace_id) }}">&larr; Back to workspace</a>
 {% endblock %}

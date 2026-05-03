@@ -3,7 +3,7 @@
 {% block content %}
 <h1>{{ workspace.workspace_name }}</h1>
 {% if workspace.workspace_description %}
-  <p style="color:#555">{{ workspace.workspace_description }}</p>
+  <p class="muted">{{ workspace.workspace_description }}</p>
 {% endif %}
 
 <p>
@@ -16,17 +16,17 @@
 <h2>Channels</h2>
 <p><a href="{{ url_for('new_channel', workspace_id=workspace_id) }}">+ New channel</a></p>
 {% if channels %}
-  <ul style="list-style:none;padding:0">
+  <ul class="card-list">
     {% for ch in channels %}
-      <li style="background:#fff;border-radius:6px;padding:0.75rem 1rem;margin-bottom:0.5rem;box-shadow:0 1px 3px rgba(0,0,0,.1)">
+      <li class="card">
         <a href="{{ url_for('channel', channel_id=ch.channel_id) }}"># {{ ch.channel_name }}</a>
-        <span style="color:#888;font-size:0.85rem;margin-left:0.5rem">({{ ch.channel_type }})</span>
+        <span class="channel-type">({{ ch.channel_type }})</span>
       </li>
     {% endfor %}
   </ul>
 {% else %}
-  <p>No channels yet.</p>
+  <div class="empty">No channels yet. Create one to get started.</div>
 {% endif %}
 
-<p><a href="{{ url_for('dashboard') }}">&larr; Back to dashboard</a></p>
+<a class="back-link" href="{{ url_for('dashboard') }}">&larr; Back to dashboard</a>
 {% endblock %}

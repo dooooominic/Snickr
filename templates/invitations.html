@@ -3,62 +3,58 @@
 {% block content %}
 <h1>Pending invitations</h1>
 
-<h2 style="margin-top:1.5rem">Workspaces</h2>
+<h2>Workspaces</h2>
 {% if workspace_invites %}
-  <ul style="list-style:none;padding:0">
+  <ul class="card-list">
     {% for inv in workspace_invites %}
-      <li style="background:#fff;border-radius:6px;padding:1rem;margin-bottom:0.75rem;box-shadow:0 1px 3px rgba(0,0,0,.1)">
+      <li class="card">
         <strong>{{ inv.workspace_name }}</strong>
         {% if inv.workspace_description %}
-          <p style="margin:0.25rem 0;color:#555">{{ inv.workspace_description }}</p>
+          <p class="muted" style="margin:0.25rem 0">{{ inv.workspace_description }}</p>
         {% endif %}
-        <p style="margin:0.25rem 0;color:#888;font-size:0.9rem">
-          Invited by {{ inv.inviter }} on {{ inv.invitation_time.strftime('%Y-%m-%d') }}
-        </p>
-        <div style="display:flex;gap:0.5rem;margin-top:0.5rem">
+        <p class="entry-meta">Invited by {{ inv.inviter }} {{ inv.invitation_time|relative_time }}</p>
+        <div class="entry-actions">
           <form method="post" action="{{ url_for('respond_workspace_invitation', invitation_id=inv.invitation_id, action='accept') }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit">Accept</button>
           </form>
           <form method="post" action="{{ url_for('respond_workspace_invitation', invitation_id=inv.invitation_id, action='decline') }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" style="background:#888">Decline</button>
+            <button type="submit" class="btn-secondary">Decline</button>
           </form>
         </div>
       </li>
     {% endfor %}
   </ul>
 {% else %}
-  <p style="color:#777">No pending workspace invitations.</p>
+  <div class="empty">No pending workspace invitations.</div>
 {% endif %}
 
-<h2 style="margin-top:1.5rem">Channels</h2>
+<h2>Channels</h2>
 {% if channel_invites %}
-  <ul style="list-style:none;padding:0">
+  <ul class="card-list">
     {% for inv in channel_invites %}
-      <li style="background:#fff;border-radius:6px;padding:1rem;margin-bottom:0.75rem;box-shadow:0 1px 3px rgba(0,0,0,.1)">
+      <li class="card">
         <strong># {{ inv.channel_name }}</strong>
-        <span style="color:#888;font-size:0.85rem">({{ inv.channel_type }})</span>
-        <p style="margin:0.25rem 0;color:#555">in {{ inv.workspace_name }}</p>
-        <p style="margin:0.25rem 0;color:#888;font-size:0.9rem">
-          Invited by {{ inv.inviter }} on {{ inv.invitation_time.strftime('%Y-%m-%d') }}
-        </p>
-        <div style="display:flex;gap:0.5rem;margin-top:0.5rem">
+        <span class="channel-type">({{ inv.channel_type }})</span>
+        <p class="muted" style="margin:0.25rem 0">in {{ inv.workspace_name }}</p>
+        <p class="entry-meta">Invited by {{ inv.inviter }} {{ inv.invitation_time|relative_time }}</p>
+        <div class="entry-actions">
           <form method="post" action="{{ url_for('respond_channel_invitation', invitation_id=inv.invitation_id, action='accept') }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit">Accept</button>
           </form>
           <form method="post" action="{{ url_for('respond_channel_invitation', invitation_id=inv.invitation_id, action='decline') }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" style="background:#888">Decline</button>
+            <button type="submit" class="btn-secondary">Decline</button>
           </form>
         </div>
       </li>
     {% endfor %}
   </ul>
 {% else %}
-  <p style="color:#777">No pending channel invitations.</p>
+  <div class="empty">No pending channel invitations.</div>
 {% endif %}
 
-<p style="margin-top:1.5rem"><a href="{{ url_for('dashboard') }}">&larr; Back to dashboard</a></p>
+<a class="back-link" href="{{ url_for('dashboard') }}">&larr; Back to dashboard</a>
 {% endblock %}

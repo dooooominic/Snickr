@@ -4,21 +4,21 @@
 <h1>Create an account</h1>
 <form method="post" action="{{ url_for('register') }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  <div style="margin-bottom:0.75rem">
-    <label for="email">Email</label><br>
-    <input type="email" id="email" name="email" required autofocus style="width:100%;max-width:320px;padding:0.4rem">
+  <div class="form-field">
+    <label for="email">Email</label>
+    <input type="email" id="email" name="email" required autofocus>
   </div>
-  <div style="margin-bottom:0.75rem">
-    <label for="username">Username</label><br>
-    <input type="text" id="username" name="username" required style="width:100%;max-width:320px;padding:0.4rem">
+  <div class="form-field">
+    <label for="username">Username</label>
+    <input type="text" id="username" name="username" required>
   </div>
-  <div style="margin-bottom:0.75rem">
-    <label for="nickname">Nickname <span style="color:#888;font-weight:normal">(optional)</span></label><br>
-    <input type="text" id="nickname" name="nickname" style="width:100%;max-width:320px;padding:0.4rem">
+  <div class="form-field">
+    <label for="nickname">Nickname <span class="hint">(optional)</span></label>
+    <input type="text" id="nickname" name="nickname">
   </div>
-  <div style="margin-bottom:0.75rem">
-    <label for="password">Password <span style="color:#888;font-weight:normal">(min 6 characters)</span></label><br>
-    <input type="password" id="password" name="password" required minlength="6" style="width:100%;max-width:320px;padding:0.4rem">
+  <div class="form-field">
+    <label for="password">Password <span class="hint">(min 6 characters)</span></label>
+    <input type="password" id="password" name="password" required minlength="6">
   </div>
   <button type="submit">Sign up</button>
 </form>

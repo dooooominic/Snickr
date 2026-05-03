@@ -1,22 +1,22 @@
 {% extends "base.html" %}
 {% block title %}Snickr — Dashboard{% endblock %}
 {% block content %}
-<h1>Your Workspaces</h1>
+<h1>Your workspaces</h1>
 <p><a href="{{ url_for('new_workspace') }}">+ New workspace</a></p>
 {% if workspaces %}
-  <ul style="list-style:none;padding:0">
+  <ul class="card-list">
     {% for ws in workspaces %}
-      <li style="background:#fff;border-radius:6px;padding:1rem;margin-bottom:0.75rem;box-shadow:0 1px 3px rgba(0,0,0,.1)">
+      <li class="card">
         <a href="{{ url_for('workspace', workspace_id=ws.workspace_id) }}">
           <strong>{{ ws.workspace_name }}</strong>
         </a>
         {% if ws.workspace_description %}
-          <p style="margin:0.25rem 0 0;color:#555">{{ ws.workspace_description }}</p>
+          <p class="muted" style="margin:0.25rem 0 0">{{ ws.workspace_description }}</p>
         {% endif %}
       </li>
     {% endfor %}
   </ul>
 {% else %}
-  <p>You're not a member of any workspaces yet.</p>
+  <div class="empty">You're not a member of any workspaces yet.</div>
 {% endif %}
 {% endblock %}
