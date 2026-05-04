@@ -20,13 +20,13 @@
             'slack-accent':     '#E01E5A',
           },
           fontFamily: {
-            sans: ['Lato', 'system-ui', 'sans-serif'],
+            sans: ['Plus Jakarta Sans', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
           },
         },
       },
     };
   </script>
-  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <style>
     @keyframes snickr-toast-in {
@@ -36,11 +36,11 @@
     .snickr-toast { animation: snickr-toast-in 0.2s ease; }
   </style>
 </head>
-<body class="h-screen flex flex-col font-sans text-[#1D1C1D] dark:text-gray-100 bg-white dark:bg-gray-900 antialiased overflow-hidden">
+<body class="h-screen flex flex-col font-sans text-[#1D1C1D] dark:text-gray-100 bg-[#FFF3B0] dark:bg-gray-900 antialiased overflow-hidden">
 
   <!-- Top bar -->
   <header class="bg-slack-top text-white h-12 flex items-center px-4 gap-4 flex-shrink-0">
-    <a href="{{ url_for('index') }}" class="font-black tracking-tight">Snickr</a>
+    <a href="{{ url_for('index') }}" class="font-black tracking-tight" style="font-family: 'Space Grotesk', sans-serif;">Snickr</a>
     {% if session.user %}
       <form class="flex-1 max-w-xl mx-auto" method="get" action="{{ url_for('search') }}">
         <input type="text" name="q" placeholder="Search messages"
@@ -137,7 +137,7 @@
     {% endif %}
 
     <!-- Main content -->
-    <main class="flex-1 overflow-y-auto bg-white dark:bg-gray-900">
+    <main class="flex-1 overflow-y-auto bg-[#FFF3B0] dark:bg-gray-900">
       <div class="{% if active_workspace %}{% else %}max-w-3xl mx-auto px-6 py-8{% endif %}">
         {% block content %}{% endblock %}
       </div>
