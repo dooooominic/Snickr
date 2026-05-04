@@ -65,7 +65,11 @@
         {% set ns.prev_time = msg.message_time %}
       {% endfor %}
     {% else %}
-      <div class="text-center text-gray-500 py-12">No messages yet. Be the first.</div>
+      <div class="text-center py-16">
+        <div class="text-5xl mb-3">💬</div>
+        <p class="font-black text-lg mb-1">This is the very beginning of #{{ channel.channel_name }}</p>
+        <p class="text-gray-500 dark:text-gray-400 text-sm">Be the first to say something.</p>
+      </div>
     {% endif %}
   </div>
 

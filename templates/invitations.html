@@ -8,16 +8,16 @@
   {% if workspace_invites %}
     <ul class="space-y-3 mb-8">
       {% for inv in workspace_invites %}
-        <li class="p-4 bg-white border border-gray-200 rounded-lg">
+        <li class="p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
           <div class="flex items-start gap-3">
             <span class="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold flex-shrink-0"
                   style="background: {{ inv.workspace_name|avatar_color }}">{{ inv.workspace_name|initial }}</span>
             <div class="flex-1 min-w-0">
               <strong class="block">{{ inv.workspace_name }}</strong>
               {% if inv.workspace_description %}
-                <p class="text-sm text-gray-600 mt-1">{{ inv.workspace_description }}</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">{{ inv.workspace_description }}</p>
               {% endif %}
-              <p class="text-xs text-gray-500 mt-1">Invited by {{ inv.inviter }} {{ inv.invitation_time|relative_time }}</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Invited by {{ inv.inviter }} {{ inv.invitation_time|relative_time }}</p>
             </div>
           </div>
           <div class="flex gap-2 mt-3">
@@ -25,7 +25,8 @@
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button type="submit" class="px-3 py-1 bg-slack-side text-white text-sm font-semibold rounded hover:bg-slack-top">Accept</button>
             </form>
-            <form method="post" action="{{ url_for('respond_workspace_invitation', invitation_id=inv.invitation_id, action='decline') }}">
+            <form method="post" action="{{ url_for('respond_workspace_invitation', invitation_id=inv.invitation_id, action='decline') }}"
+                  onsubmit="return confirm('Decline this workspace invitation?')">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button type="submit" class="px-3 py-1 bg-gray-200 text-gray-700 text-sm font-semibold rounded hover:bg-gray-300">Decline</button>
             </form>
@@ -34,8 +35,9 @@
       {% endfor %}
     </ul>
   {% else %}
-    <div class="text-center py-6 text-gray-500 border-2 border-dashed border-gray-200 rounded-lg mb-8">
-      No pending workspace invitations.
+    <div class="text-center py-6 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg mb-8">
+      <div class="text-3xl mb-2">🏢</div>
+      <p class="text-gray-500 dark:text-gray-400 text-sm">No pending workspace invitations.</p>
     </div>
   {% endif %}
 
@@ -43,19 +45,20 @@
   {% if channel_invites %}
     <ul class="space-y-3">
       {% for inv in channel_invites %}
-        <li class="p-4 bg-white border border-gray-200 rounded-lg">
+        <li class="p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
           <strong>
             {% if inv.channel_type == 'private' %}🔒{% else %}#{% endif %} {{ inv.channel_name }}
           </strong>
           <span class="text-xs text-gray-500 ml-1">({{ inv.channel_type }})</span>
-          <p class="text-sm text-gray-600 mt-1">in {{ inv.workspace_name }}</p>
-          <p class="text-xs text-gray-500 mt-1">Invited by {{ inv.inviter }} {{ inv.invitation_time|relative_time }}</p>
+          <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">in {{ inv.workspace_name }}</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Invited by {{ inv.inviter }} {{ inv.invitation_time|relative_time }}</p>
           <div class="flex gap-2 mt-3">
             <form method="post" action="{{ url_for('respond_channel_invitation', invitation_id=inv.invitation_id, action='accept') }}">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button type="submit" class="px-3 py-1 bg-slack-side text-white text-sm font-semibold rounded hover:bg-slack-top">Accept</button>
             </form>
-            <form method="post" action="{{ url_for('respond_channel_invitation', invitation_id=inv.invitation_id, action='decline') }}">
+            <form method="post" action="{{ url_for('respond_channel_invitation', invitation_id=inv.invitation_id, action='decline') }}"
+                  onsubmit="return confirm('Decline this channel invitation?')">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button type="submit" class="px-3 py-1 bg-gray-200 text-gray-700 text-sm font-semibold rounded hover:bg-gray-300">Decline</button>
             </form>
@@ -64,8 +67,9 @@
       {% endfor %}
     </ul>
   {% else %}
-    <div class="text-center py-6 text-gray-500 border-2 border-dashed border-gray-200 rounded-lg">
-      No pending channel invitations.
+    <div class="text-center py-6 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg">
+      <div class="text-3xl mb-2">#</div>
+      <p class="text-gray-500 dark:text-gray-400 text-sm">No pending channel invitations.</p>
     </div>
   {% endif %}
 

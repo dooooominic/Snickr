@@ -1263,5 +1263,80 @@ def inject_invitation_count():
     return {"pending_invitation_count": rows[0]["n"] if rows else 0}
 
 
+@app.route("/workspace/<workspace_id>/dm/<target_user_id>")
+@login_required
+def start_dm(workspace_id, target_user_id):
+    user = current_user()
+    wm = db.query(
+        "SELECT 1 FROM workspace_membership WHERE workspace_id = %s AND user_id = %s",
+        (workspace_id, user["id"]),
+    )
+    if not wm:
+        flash("You don't have access to that workspace.")
+        return redirect(url_for("dashboard"))
+
+    if target_user_id == user["id"]:
+        flash("You can't DM yourself.")
+        return redirect(url_for("workspace_members", workspace_id=workspace_id))
+
+    existing = db.query(
+        """
+        SELECT c.channel_id
+        FROM channels c
+        JOIN channel_membership cm1 ON cm1.channel_id = c.channel_id AND cm1.user_id = %s
+        JOIN channel_membership cm2 ON cm2.channel_id = c.channel_id AND cm2.user_id = %s
+        WHERE c.workspace_id = %s AND c.channel_type = 'direct'
+          AND NOT EXISTS (
+              SELECT 1 FROM channel_membership cm3
+              WHERE cm3.channel_id = c.channel_id
+                AND cm3.user_id NOT IN (%s, %s)
+          )
+        LIMIT 1
+        """,
+        (user["id"], target_user_id, workspace_id, user["id"], target_user_id),
+    )
+    if existing:
+        return redirect(url_for("channel", channel_id=existing[0]["channel_id"]))
+
+    target = db.query("SELECT username FROM users WHERE user_id = %s", (target_user_id,))
+    if not target:
+        flash("User not found.")
+        return redirect(url_for("workspace_members", workspace_id=workspace_id))
+
+    channel_name = target[0]["username"]
+    try:
+        with db.transaction() as cur:
+            cur.execute(
+                "INSERT INTO channels (workspace_id, channel_name, channel_type, creator_id) VALUES (%s, %s, 'direct', %s) RETURNING channel_id",
+                (workspace_id, channel_name, user["id"]),
+            )
+            channel_id = str(cur.fetchone()["channel_id"])
+            cur.execute("INSERT INTO channel_membership (channel_id, user_id) VALUES (%s, %s)", (channel_id, user["id"]))
+            cur.execute("INSERT INTO channel_membership (channel_id, user_id) VALUES (%s, %s)", (channel_id, target_user_id))
+    except psycopg2.errors.UniqueViolation:
+        me_row = db.query("SELECT username FROM users WHERE user_id = %s", (user["id"],))
+        channel_name = f"{me_row[0]['username']}-{channel_name}"
+        with db.transaction() as cur:
+            cur.execute(
+                "INSERT INTO channels (workspace_id, channel_name, channel_type, creator_id) VALUES (%s, %s, 'direct', %s) RETURNING channel_id",
+                (workspace_id, channel_name, user["id"]),
+            )
+            channel_id = str(cur.fetchone()["channel_id"])
+            cur.execute("INSERT INTO channel_membership (channel_id, user_id) VALUES (%s, %s)", (channel_id, user["id"]))
+            cur.execute("INSERT INTO channel_membership (channel_id, user_id) VALUES (%s, %s)", (channel_id, target_user_id))
+
+    return redirect(url_for("channel", channel_id=channel_id))
+
+
+@app.errorhandler(404)
+def not_found(e):
+    return render_template("404.html"), 404
+
+
+@app.errorhandler(500)
+def server_error(e):
+    return render_template("500.html"), 500
+
+
 if __name__ == "__main__":
     app.run(debug=True)

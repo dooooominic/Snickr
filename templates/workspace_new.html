@@ -1,22 +1,42 @@
 {% extends "base.html" %}
 {% block title %}Snickr — New workspace{% endblock %}
 {% block content %}
-<div class="max-w-md mx-auto py-8 px-4">
-  <h1 class="text-2xl font-black mb-6">Create a workspace</h1>
-  <form method="post" action="{{ url_for('new_workspace') }}" class="space-y-4">
+<div class="max-w-lg mx-auto py-12 px-6">
+  <div class="text-center mb-8">
+    <div class="text-6xl mb-4">🏢</div>
+    <h1 class="text-3xl font-black mb-2">Create a workspace</h1>
+    <p class="text-gray-500 dark:text-gray-400 text-sm">
+      Workspaces bring your team together. Give yours a name and get started.
+    </p>
+  </div>
+
+  <form method="post" action="{{ url_for('new_workspace') }}" class="space-y-5">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
     <div>
       <label for="workspace_name" class="block text-sm font-semibold mb-1">Workspace name</label>
       <input type="text" id="workspace_name" name="workspace_name" required autofocus
-             class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-slack-side/30 focus:border-slack-side">
+             placeholder="e.g. Acme Engineering"
+             class="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-slack-side/30 focus:border-slack-side text-sm">
     </div>
+
     <div>
-      <label for="workspace_description" class="block text-sm font-semibold mb-1">Description <span class="font-normal text-gray-500">(optional)</span></label>
+      <label for="workspace_description" class="block text-sm font-semibold mb-1">
+        Description <span class="font-normal text-gray-400">(optional)</span>
+      </label>
       <textarea id="workspace_description" name="workspace_description" rows="3"
-                class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-slack-side/30 focus:border-slack-side"></textarea>
+                placeholder="What's this workspace for?"
+                class="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-slack-side/30 focus:border-slack-side text-sm resize-none"></textarea>
     </div>
-    <button type="submit" class="px-4 py-2 bg-slack-side text-white font-semibold rounded hover:bg-slack-top">Create workspace</button>
+
+    <button type="submit"
+            class="w-full py-3 bg-slack-side text-white font-bold rounded-lg hover:bg-slack-top text-sm tracking-wide">
+      Create workspace
+    </button>
   </form>
-  <a href="{{ url_for('dashboard') }}" class="inline-block mt-6 text-sm text-gray-500 hover:underline">&larr; Back to dashboard</a>
+
+  <p class="text-center mt-6 text-sm text-gray-400">
+    Want to join an existing workspace? Ask an admin to invite you.
+  </p>
 </div>
 {% endblock %}

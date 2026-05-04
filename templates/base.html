@@ -7,6 +7,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
+      darkMode: 'class',
       theme: {
         extend: {
           colors: {
@@ -27,8 +28,15 @@
   </script>
   <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    @keyframes snickr-toast-in {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .snickr-toast { animation: snickr-toast-in 0.2s ease; }
+  </style>
 </head>
-<body class="h-screen flex flex-col font-sans text-[#1D1C1D] bg-white antialiased overflow-hidden">
+<body class="h-screen flex flex-col font-sans text-[#1D1C1D] dark:text-gray-100 bg-white dark:bg-gray-900 antialiased overflow-hidden">
 
   <!-- Top bar -->
   <header class="bg-slack-top text-white h-12 flex items-center px-4 gap-4 flex-shrink-0">
@@ -43,9 +51,13 @@
       </a>
       <span class="text-sm opacity-80">{{ session.user.username }}</span>
       <a href="{{ url_for('profile') }}" class="text-sm hover:underline">Profile</a>
+      <button id="theme-toggle" title="Toggle dark mode"
+              class="w-7 h-7 flex items-center justify-center rounded hover:bg-white/20 text-base leading-none">🌙</button>
       <a href="{{ url_for('logout') }}" class="text-sm hover:underline">Log out</a>
     {% else %}
       <span class="flex-1"></span>
+      <button id="theme-toggle" title="Toggle dark mode"
+              class="w-7 h-7 flex items-center justify-center rounded hover:bg-white/20 text-base leading-none">🌙</button>
       <a href="{{ url_for('login') }}" class="text-sm hover:underline">Log in</a>
     {% endif %}
   </header>
@@ -60,14 +72,14 @@
           {% set is_active = active_workspace and ws.workspace_id|string == active_workspace.workspace_id|string %}
           <a href="{{ url_for('workspace', workspace_id=ws.workspace_id) }}"
              title="{{ ws.workspace_name }}"
-             class="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-sm
-                    {% if is_active %}ring-2 ring-white{% else %}hover:opacity-80{% endif %}"
+             class="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-sm transition-opacity duration-100
+                    {% if is_active %}ring-2 ring-white{% else %}opacity-80 hover:opacity-100{% endif %}"
              style="background: {{ ws.workspace_name|avatar_color }}">
             {{ ws.workspace_name|initial }}
           </a>
         {% endfor %}
         <a href="{{ url_for('new_workspace') }}" title="New workspace"
-           class="w-10 h-10 rounded-lg flex items-center justify-center bg-white/10 text-white text-xl hover:bg-white/20">+</a>
+           class="w-10 h-10 rounded-lg flex items-center justify-center bg-white/10 text-white text-xl hover:bg-white/20 transition-colors duration-100">+</a>
       </aside>
     {% endif %}
 
@@ -75,7 +87,7 @@
       <!-- Channel sidebar -->
       <aside class="w-60 bg-slack-side text-white/85 flex-shrink-0 overflow-y-auto">
         <div class="px-4 py-3 border-b border-white/10">
-          <h2 class="font-black text-base text-white truncate">{{ active_workspace.workspace_name }}</h2>
+          <h2 class="font-black text-lg text-white truncate">{{ active_workspace.workspace_name }}</h2>
         </div>
 
         <div class="px-2 py-2">
@@ -83,7 +95,7 @@
           {% for ch in workspace_channels if ch.channel_type != 'direct' %}
             {% set is_active = active_channel_id and ch.channel_id|string == active_channel_id %}
             <a href="{{ url_for('channel', channel_id=ch.channel_id) }}"
-               class="flex items-center justify-between px-2 py-1 rounded text-sm
+               class="flex items-center justify-between px-2 py-1 rounded text-sm transition-colors duration-100
                       {% if is_active %}bg-slack-active text-white{% else %}hover:bg-white/10{% endif %}
                       {% if ch.unread_count and not is_active %}font-bold text-white{% endif %}">
               <span class="truncate">
@@ -95,43 +107,104 @@
             </a>
           {% endfor %}
           <a href="{{ url_for('new_channel', workspace_id=active_workspace.workspace_id) }}"
-             class="block px-2 py-1 rounded text-sm text-white/70 hover:bg-white/10 mt-1">+ Add channel</a>
+             class="block px-2 py-1 rounded text-sm text-white/70 hover:bg-white/10 transition-colors duration-100 mt-1">+ Add channel</a>
           <a href="{{ url_for('browse_channels', workspace_id=active_workspace.workspace_id) }}"
-             class="block px-2 py-1 rounded text-sm text-white/70 hover:bg-white/10">Browse channels</a>
+             class="block px-2 py-1 rounded text-sm text-white/70 hover:bg-white/10 transition-colors duration-100">Browse channels</a>
 
           <div class="text-xs uppercase tracking-wider text-white/60 px-2 mt-4 mb-1">Direct messages</div>
           {% for ch in workspace_channels if ch.channel_type == 'direct' %}
             {% set is_active = active_channel_id and ch.channel_id|string == active_channel_id %}
             <a href="{{ url_for('channel', channel_id=ch.channel_id) }}"
-               class="flex items-center justify-between px-2 py-1 rounded text-sm
+               class="flex items-center justify-between px-2 py-1 rounded text-sm transition-colors duration-100
                       {% if is_active %}bg-slack-active text-white{% else %}hover:bg-white/10{% endif %}
                       {% if ch.unread_count and not is_active %}font-bold text-white{% endif %}">
-              <span class="truncate">@ {{ ch.channel_name }}</span>
+              <span class="flex items-center gap-2 truncate min-w-0">
+                <span class="w-5 h-5 rounded flex-shrink-0 flex items-center justify-center text-white text-[9px] font-bold"
+                      style="background: {{ ch.channel_name|avatar_color }}">{{ ch.channel_name|initial }}</span>
+                <span class="truncate">{{ ch.channel_name }}</span>
+              </span>
               {% if ch.unread_count and not is_active %}
-                <span class="ml-1 inline-flex items-center justify-center bg-slack-accent text-white text-[10px] font-bold rounded-full px-1.5 min-w-[18px] h-[18px]">{{ ch.unread_count }}</span>
+                <span class="ml-1 inline-flex items-center justify-center bg-slack-accent text-white text-[10px] font-bold rounded-full px-1.5 min-w-[18px] h-[18px] flex-shrink-0">{{ ch.unread_count }}</span>
               {% endif %}
             </a>
           {% endfor %}
 
           <div class="text-xs uppercase tracking-wider text-white/60 px-2 mt-4 mb-1">Workspace</div>
           <a href="{{ url_for('workspace_members', workspace_id=active_workspace.workspace_id) }}"
-             class="block px-2 py-1 rounded text-sm hover:bg-white/10">Members</a>
+             class="block px-2 py-1 rounded text-sm hover:bg-white/10 transition-colors duration-100">Members</a>
         </div>
       </aside>
     {% endif %}
 
     <!-- Main content -->
-    <main class="flex-1 overflow-y-auto bg-white">
+    <main class="flex-1 overflow-y-auto bg-white dark:bg-gray-900">
       <div class="{% if active_workspace %}{% else %}max-w-3xl mx-auto px-6 py-8{% endif %}">
-        {% with messages = get_flashed_messages() %}
-          {% for msg in messages %}
-            <div class="{% if active_workspace %}mx-6 mt-4{% endif %} mb-3 px-4 py-2 bg-red-50 border border-red-200 text-red-900 rounded text-sm">{{ msg }}</div>
-          {% endfor %}
-        {% endwith %}
         {% block content %}{% endblock %}
       </div>
     </main>
   </div>
 
+  <!-- Toast notifications -->
+  <div id="toast-root" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 items-end pointer-events-none">
+    {% with messages = get_flashed_messages() %}
+      {% for msg in messages %}
+        <div class="snickr-toast pointer-events-auto flex items-start gap-3 px-4 py-3 bg-gray-900 dark:bg-gray-700 text-white text-sm rounded-lg shadow-xl max-w-sm w-full">
+          <span class="flex-1">{{ msg }}</span>
+          <button onclick="this.closest('.snickr-toast').remove()"
+                  class="flex-shrink-0 text-white/50 hover:text-white ml-1 text-lg leading-none">&times;</button>
+        </div>
+      {% endfor %}
+    {% endwith %}
+  </div>
+
+  <script>
+    // Dark mode toggle + persistence
+    (function () {
+      const root = document.documentElement;
+      if (localStorage.getItem('theme') === 'dark') root.classList.add('dark');
+      const btn = document.getElementById('theme-toggle');
+      if (btn) {
+        btn.textContent = root.classList.contains('dark') ? '☀️' : '🌙';
+        btn.addEventListener('click', () => {
+          root.classList.toggle('dark');
+          const dark = root.classList.contains('dark');
+          localStorage.setItem('theme', dark ? 'dark' : 'light');
+          btn.textContent = dark ? '☀️' : '🌙';
+        });
+      }
+    })();
+
+    // Toast auto-dismiss after 4 s
+    document.querySelectorAll('.snickr-toast').forEach(t => {
+      setTimeout(() => {
+        t.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+        t.style.opacity = '0';
+        t.style.transform = 'translateY(10px)';
+        setTimeout(() => t.remove(), 300);
+      }, 4000);
+    });
+
+    // Escape dismisses all toasts
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        document.querySelectorAll('.snickr-toast').forEach(t => t.remove());
+      }
+    });
+
+    // Loading state: disable submit button on form submission
+    document.querySelectorAll('form').forEach(f => {
+      f.addEventListener('submit', e => {
+        if (e.defaultPrevented) return;
+        const btn = f.querySelector('button[type="submit"]');
+        if (btn) {
+          const orig = btn.textContent;
+          btn.disabled = true;
+          btn.textContent = 'Saving…';
+          // Re-enable in case of client-side validation failure or slow response
+          setTimeout(() => { btn.disabled = false; btn.textContent = orig; }, 8000);
+        }
+      });
+    });
+  </script>
 </body>
 </html>

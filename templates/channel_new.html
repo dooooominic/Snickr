@@ -8,32 +8,32 @@
     <div>
       <label for="channel_name" class="block text-sm font-semibold mb-1">Channel name</label>
       <input type="text" id="channel_name" name="channel_name" required autofocus
-             class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-slack-side/30 focus:border-slack-side">
+             class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded focus:outline-none focus:ring-2 focus:ring-slack-side/30 focus:border-slack-side">
     </div>
     <div>
       <label class="block text-sm font-semibold mb-2">Type</label>
       <div class="flex gap-2">
         <label class="flex-1 cursor-pointer">
           <input type="radio" name="channel_type" value="public" checked class="peer hidden">
-          <div class="px-3 py-2 border border-gray-300 rounded text-center text-sm peer-checked:bg-slack-side peer-checked:text-white peer-checked:border-slack-side">Public #</div>
+          <div class="px-3 py-2 border border-gray-300 dark:border-gray-600 dark:text-gray-200 rounded text-center text-sm peer-checked:bg-slack-side peer-checked:text-white peer-checked:border-slack-side">Public #</div>
         </label>
         <label class="flex-1 cursor-pointer">
           <input type="radio" name="channel_type" value="private" class="peer hidden">
-          <div class="px-3 py-2 border border-gray-300 rounded text-center text-sm peer-checked:bg-slack-side peer-checked:text-white peer-checked:border-slack-side">Private 🔒</div>
+          <div class="px-3 py-2 border border-gray-300 dark:border-gray-600 dark:text-gray-200 rounded text-center text-sm peer-checked:bg-slack-side peer-checked:text-white peer-checked:border-slack-side">Private 🔒</div>
         </label>
         <label class="flex-1 cursor-pointer">
           <input type="radio" name="channel_type" value="direct" class="peer hidden">
-          <div class="px-3 py-2 border border-gray-300 rounded text-center text-sm peer-checked:bg-slack-side peer-checked:text-white peer-checked:border-slack-side">Direct @</div>
+          <div class="px-3 py-2 border border-gray-300 dark:border-gray-600 dark:text-gray-200 rounded text-center text-sm peer-checked:bg-slack-side peer-checked:text-white peer-checked:border-slack-side">Direct @</div>
         </label>
       </div>
     </div>
     <div>
-      <label for="other_username" class="block text-sm font-semibold mb-1">Other user <span class="font-normal text-gray-500">(only for direct channels)</span></label>
+      <label for="other_username" class="block text-sm font-semibold mb-1">Other user <span class="font-normal text-gray-500 dark:text-gray-400">(only for direct channels)</span></label>
       <input type="text" id="other_username" name="other_username"
-             class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-slack-side/30 focus:border-slack-side">
+             class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded focus:outline-none focus:ring-2 focus:ring-slack-side/30 focus:border-slack-side">
     </div>
     <button type="submit" class="px-4 py-2 bg-slack-side text-white font-semibold rounded hover:bg-slack-top">Create channel</button>
   </form>
-  <a href="{{ url_for('workspace', workspace_id=workspace_id) }}" class="inline-block mt-6 text-sm text-gray-500 hover:underline">&larr; Back to workspace</a>
+  <a href="{{ url_for('workspace', workspace_id=workspace_id) }}" class="inline-block mt-6 text-sm text-gray-500 dark:text-gray-400 hover:underline">&larr; Back to workspace</a>
 </div>
 {% endblock %}

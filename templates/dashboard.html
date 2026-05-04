@@ -9,21 +9,26 @@
     <div class="grid sm:grid-cols-2 gap-3">
       {% for ws in workspaces %}
         <a href="{{ url_for('workspace', workspace_id=ws.workspace_id) }}"
-           class="block p-4 bg-white border border-gray-200 rounded-lg hover:border-slack-side hover:shadow transition">
+           class="block p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-slack-side hover:shadow transition">
           <div class="flex items-center gap-3 mb-2">
             <span class="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold"
                   style="background: {{ ws.workspace_name|avatar_color }}">{{ ws.workspace_name|initial }}</span>
             <strong class="text-base">{{ ws.workspace_name }}</strong>
           </div>
           {% if ws.workspace_description %}
-            <p class="text-sm text-gray-600">{{ ws.workspace_description }}</p>
+            <p class="text-sm text-gray-600 dark:text-gray-400">{{ ws.workspace_description }}</p>
           {% endif %}
         </a>
       {% endfor %}
     </div>
   {% else %}
-    <div class="text-center py-12 text-gray-500 border-2 border-dashed border-gray-200 rounded-lg">
-      You're not a member of any workspaces yet.
+    <div class="text-center py-12 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg">
+      <div class="text-5xl mb-3">🏢</div>
+      <p class="text-gray-500 dark:text-gray-400 mb-4">You're not a member of any workspaces yet.</p>
+      <a href="{{ url_for('new_workspace') }}"
+         class="inline-block px-4 py-2 bg-slack-side text-white font-semibold rounded hover:bg-slack-top text-sm">
+        Create your first workspace
+      </a>
     </div>
   {% endif %}
 

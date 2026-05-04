@@ -6,7 +6,7 @@
 
   <form method="get" action="{{ url_for('search') }}" class="flex gap-2 mb-6">
     <input type="text" name="q" value="{{ q }}" placeholder="Search keyword..." autofocus
-           class="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-slack-side/30 focus:border-slack-side">
+           class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded focus:outline-none focus:ring-2 focus:ring-slack-side/30 focus:border-slack-side">
     <button type="submit" class="px-4 py-2 bg-slack-side text-white font-semibold rounded hover:bg-slack-top">Search</button>
   </form>
 
@@ -18,11 +18,11 @@
     {% if results %}
       <ul class="space-y-2">
         {% for r in results %}
-          <li class="p-3 bg-white border border-gray-200 rounded-lg hover:border-slack-side">
-            <div class="flex items-center gap-2 text-xs text-gray-500 mb-1">
+          <li class="p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-slack-side">
+            <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mb-1">
               <span class="w-5 h-5 rounded flex items-center justify-center text-white text-[10px] font-bold"
                     style="background: {{ r.posted_by|avatar_color }}">{{ r.posted_by|initial }}</span>
-              <span class="font-semibold text-gray-700">{{ r.posted_by }}</span>
+              <span class="font-semibold text-gray-700 dark:text-gray-200">{{ r.posted_by }}</span>
               <span>in</span>
               <a href="{{ url_for('channel', channel_id=r.channel_id) }}" class="text-slack-active hover:underline font-semibold">
                 {% if r.channel_type == 'private' %}🔒{% elif r.channel_type == 'direct' %}@{% else %}#{% endif %}{{ r.channel_name }}

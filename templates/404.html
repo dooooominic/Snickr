@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Snickr — Page not found{% endblock %}
+{% block content %}
+<div class="flex flex-col items-center justify-center min-h-[60vh] text-center px-6">
+  <div class="text-8xl mb-4 select-none">#</div>
+  <h1 class="text-3xl font-black mb-2">Channel not found</h1>
+  <p class="text-gray-500 dark:text-gray-400 mb-8 max-w-sm">
+    That page doesn't exist — it may have been deleted or you might have followed a stale link.
+  </p>
+  <a href="{{ url_for('dashboard') }}"
+     class="px-5 py-2.5 bg-slack-side text-white font-semibold rounded hover:bg-slack-top">
+    Back to dashboard
+  </a>
+</div>
+{% endblock %}

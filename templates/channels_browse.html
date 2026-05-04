@@ -7,10 +7,10 @@
   {% if channels %}
     <div class="space-y-2">
       {% for ch in channels %}
-        <div class="flex items-center justify-between px-4 py-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
+        <div class="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
           <div>
             <div class="font-semibold text-sm"># {{ ch.channel_name }}</div>
-            <div class="text-xs text-gray-500">{{ ch.member_count }} member{{ 's' if ch.member_count != 1 }}</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">{{ ch.member_count }} member{{ 's' if ch.member_count != 1 }}</div>
           </div>
           {% if ch.is_member %}
             <a href="{{ url_for('channel', channel_id=ch.channel_id) }}"
